@@ -48,6 +48,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Agent skills
+.agents/
+
 # IDE and Editor
 .vscode/
 .idea/

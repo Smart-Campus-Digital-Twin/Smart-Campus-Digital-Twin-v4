@@ -9,8 +9,8 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/Smart-Campus-Digital-Twin/Smart-Campus-Digital-Twin-v2.git
-    targetRevision: v3
+    repoURL: https://github.com/Smart-Campus-Digital-Twin/Smart-Campus-Digital-Twin-v4.git
+    targetRevision: v4
     path: deployment/k8s-simulator
 
   destination:

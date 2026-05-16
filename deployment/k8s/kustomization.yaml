@@ -35,13 +35,13 @@ resources:
 images:
   - name: campus-api
     newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-api
-    newTag: v3
+    newTag: v4
   - name: campus-frontend
     newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-frontend
-    newTag: v3
+    newTag: v4
   - name: campus-ml-consumer
     newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-consumer
-    newTag: v3
+    newTag: v4
 
 configMapGenerator:
   - name: keycloak-realm-config

@@ -4,7 +4,7 @@ on:
   push:
     branches: ['**']
   pull_request:
-    branches: [master, main, v3]
+    branches: [master, main, v4]
   workflow_dispatch:
 
 env:
@@ -62,7 +62,11 @@ jobs:
             {"service":"campus-sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend"}
           ]'
 
-          if [ "$EVENT" = "workflow_dispatch" ]; then
+          REF="${{ github.ref }}"
+          if [ "$EVENT" = "workflow_dispatch" ] \
+             || [ "$REF" = "refs/heads/main" ] \
+             || [ "$REF" = "refs/heads/master" ] \
+             || [ "$REF" = "refs/heads/v4" ]; then
             FILTERED=$(echo "$ALL" | jq -c '.')
           else
             FILTERED=$(echo "$ALL" | jq -c --argjson c "$CHANGES" \
@@ -116,7 +120,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/v3' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/v4' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6

@@ -2,7 +2,7 @@ name: Build Sim-Control
 
 on:
   push:
-    branches: [v3]
+    branches: [v4]
     paths:
       - 'services/sim-control/**'
   workflow_dispatch:

@@ -9,4 +9,4 @@ resources:
 images:
   - name: campus-simulator
     newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-simulator
-    newTag: v3
+    newTag: v4
