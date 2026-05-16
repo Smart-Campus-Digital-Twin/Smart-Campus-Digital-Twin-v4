@@ -2,8 +2,8 @@
 #
 # Services (startup order):
 #   mosquitto → kafka → influxdb → postgres → redis
-#   → bridge → flink-jobmanager → flink-taskmanager → flink-submit
-#   → spark-master → spark-worker → airflow → api → grafana → frontend
+#   → bridge → ml-consumer → api → mlflow → ml-prediction → ml-retrain
+#   → grafana → frontend
 #
 # Usage:
 #   make env    # copy .env.example files
@@ -30,8 +30,6 @@ volumes:
   postgres-data:
   redis-data:
   grafana-data:
-  airflow-logs:
-  spark-work:
   prometheus-data:
   mlflow-data:
   kong-config:
@@ -307,90 +305,6 @@ services:
           cpus: "0.5"
 
   # ==========================================================================
-  # Layer 6 — Flink cluster + job submission
-  # ==========================================================================
-
-  flink-jobmanager:
-    build:
-      context: .
-      dockerfile: processing/flink/Dockerfile
-      target: cluster
-    container_name: campus-flink-jm
-    restart: unless-stopped
-    networks: [campus]
-    ports:
-      - "127.0.0.1:8081:8081"    # Flink Web UI — local only
-      - "127.0.0.1:9249:9249"    # Prometheus metrics
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: "1.0"
-    volumes:
-      - ./infra/flink/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
-    env_file:
-      - env/kafka.env
-      - env/influxdb.env
-      - env/postgres.env
-    command: jobmanager
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8081/overview"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  flink-taskmanager:
-    build:
-      context: .
-      dockerfile: processing/flink/Dockerfile
-      target: cluster
-    container_name: campus-flink-tm
-    restart: unless-stopped
-    networks: [campus]
-    depends_on:
-      flink-jobmanager:
-        condition: service_healthy
-    volumes:
-      - ./infra/flink/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
-      - ./processing/flink:/app/processing/flink:ro
-    env_file:
-      - env/kafka.env
-      - env/influxdb.env
-      - env/postgres.env
-    command: taskmanager
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: "2.0"
-
-  # Submits all three PyFlink jobs once the cluster + dependencies are ready.
-  flink-submit:
-    build:
-      context: .
-      dockerfile: processing/flink/Dockerfile
-    container_name: campus-flink-submit
-    networks: [campus]
-    depends_on:
-      flink-jobmanager:
-        condition: service_healthy
-      kafka-init:
-        condition: service_completed_successfully
-      influxdb-init:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./processing/flink:/app/processing/flink:ro
-    env_file:
-      - env/kafka.env
-      - env/influxdb.env
-      - env/postgres.env
-    environment:
-      FLINK_MASTER: flink-jobmanager:8081
-    restart: "no"
-
-  # ==========================================================================
   # Layer 6b — Observability exporters (Prometheus scrape targets)
   # ==========================================================================
 
@@ -458,124 +372,6 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-
-  # ==========================================================================
-  # Layer 7 — Spark cluster
-  # ==========================================================================
-
-  spark-master:
-    build:
-      context: .
-      dockerfile: infra/spark/Dockerfile
-      target: cluster
-    container_name: campus-spark-master
-    restart: unless-stopped
-    networks: [campus]
-    ports:
-      - "127.0.0.1:8080:8080"    # Spark Web UI — local only
-      - "127.0.0.1:7077:7077"    # Spark master — local only
-    env_file:
-      - env/postgres.env
-      - env/influxdb.env
-      - env/kafka.env
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: "0.5"
-    command:
-      - /opt/spark/bin/spark-class
-      - org.apache.spark.deploy.master.Master
-      - --host
-      - spark-master
-      - --port
-      - "7077"
-      - --webui-port
-      - "8080"
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  spark-worker:
-    build:
-      context: .
-      dockerfile: infra/spark/Dockerfile
-      target: cluster
-    container_name: campus-spark-worker
-    restart: unless-stopped
-    networks: [campus]
-    depends_on:
-      spark-master:
-        condition: service_healthy
-    env_file:
-      - env/postgres.env
-      - env/influxdb.env
-      - env/kafka.env
-    user: root
-    command:
-      - bash
-      - -c
-      - |
-        chown -R 185:185 /opt/spark/work && \
-        exec gosu spark /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    environment:
-      SPARK_WORKER_MEMORY: 2G
-      SPARK_WORKER_CORES: 2
-    volumes:
-      - spark-work:/opt/spark/work
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-
-  # ==========================================================================
-  # Layer 8 — Airflow (batch scheduler)
-  # ==========================================================================
-
-  airflow:
-    build:
-      context: .
-      dockerfile: airflow/Dockerfile
-    container_name: campus-airflow
-    restart: unless-stopped
-    networks: [campus]
-    ports:
-      - "127.0.0.1:8082:8080"    # Airflow Web UI — local only
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "2.0"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      spark-master:
-        condition: service_healthy
-    env_file:
-      - env/postgres.env
-      - env/influxdb.env
-      - env/airflow.env
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__PARALLELISM: "2"
-      AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: "1"
-      AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: "1"
-      AIRFLOW__WEBSERVER__WORKERS: "2"
-      SPARK_MASTER_URL: spark://spark-master:7077
-      PYTHONPATH: /opt/campus:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
-      SPARK_HOME: /opt/spark
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk
-      PYSPARK_PYTHON: /usr/bin/python3.12
-      PYSPARK_DRIVER_PYTHON: /home/airflow/.local/bin/python3.12
-      AIRFLOW_CONN_SPARK_DEFAULT: '{"conn_type": "spark", "host": "spark-master", "port": 7077}'
-    command: standalone
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags:ro
-      - .:/opt/campus:ro
-      - airflow-logs:/opt/airflow/logs
 
   # ==========================================================================
   # Layer 9 — FastAPI backend
@@ -674,70 +470,59 @@ services:
           memory: 512M
           cpus: "0.5"
 
-  # Stays alive so Airflow can docker exec into it for weekly kedro retraining.
-  # Bootstrap (first-time seeding) is run manually once:
-  #   docker exec campus-ml-training python /opt/campus/ml/bootstrap_training.py
-  ml-training:
+  ml-prediction:
     build:
       context: .
-      dockerfile: ml/Dockerfile
-      target: training
-    container_name: campus-ml-training
+      dockerfile: services/ml-prediction/Dockerfile
+    container_name: campus-ml-prediction
     restart: unless-stopped
     networks: [campus]
+    ports:
+      - "127.0.0.1:8001:8001"
     depends_on:
       mlflow:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
       influxdb:
         condition: service_healthy
-    volumes:
-      - .:/opt/campus
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - KEDRO_DISABLE_TELEMETRY=true
-      - PYTHONPATH=/opt/campus
-      - PYTHONWARNINGS=ignore
-      - GIT_PYTHON_REFRESH=quiet
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "2.0"
-
-  # Stays alive so Airflow can docker exec into it for daily batch inference.
-  ml-inference:
-    build:
-      context: .
-      dockerfile: ml/Dockerfile
-      target: inference
-    container_name: campus-ml-inference
-    restart: unless-stopped
-    networks: [campus]
-    depends_on:
-      mlflow:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      influxdb:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    volumes:
-      - .:/opt/campus
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=campus
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_ORG: smart-campus
+      INFLUXDB_BUCKET: campus_predictions
     env_file:
-      - env/postgres.env
+      - env/influxdb.env
     deploy:
       resources:
         limits:
           memory: 1G
           cpus: "1.0"
+
+  ml-retrain:
+    build:
+      context: .
+      dockerfile: services/ml-retrain/Dockerfile
+    container_name: campus-ml-retrain
+    restart: unless-stopped
+    networks: [campus]
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_ORG: smart-campus
+      INFLUXDB_BUCKET_SENSORS: campus_sensors
+      TRAIN_DAYS: "90"
+      DATASETS_DIR: /app/datasets
+    env_file:
+      - env/influxdb.env
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
 
   # ==========================================================================
   # Layer 12 — Three.js / Next.js frontend (git submodule: frontend/)
@@ -777,34 +562,36 @@ services:
       retries: 5
       start_period: 60s
 
-  # Real-time prediction service - lightweight API for Flink jobs
-  # DISABLED: Causing issues, commented out for now
-  # ml-prediction:
-  #   build:
-  #     context: ml/prediction_service
-  #     dockerfile: Dockerfile
-  #   container_name: campus-ml-prediction
-  #   restart: unless-stopped
-  #   networks: [campus]
-  #   ports:
-  #     - "8001:8001"
-  #   depends_on:
-  #     mlflow:
-  #       condition: service_healthy
-  #     influxdb:
-  #       condition: service_healthy
-  #   environment:
-  #     - MLFLOW_TRACKING_URI=http://mlflow:5000
-  #     - INFLUXDB_URL=http://influxdb:8086
-  #     - INFLUXDB_ORG=smart-campus
-  #     - INFLUXDB_BUCKET=campus_predictions
-  #   env_file:
-  #     - env/influxdb.env
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 2G
-  #         cpus: "2.0"
+  sim-control-backend:
+    build:
+      context: services/sim-control/backend
+      dockerfile: Dockerfile
+    container_name: campus-sim-control-backend
+    restart: unless-stopped
+    networks: [campus]
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      MQTT_HOST: ${MQTT_HOST:-139.59.194.248}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      PUBLISH_INTERVAL_S: ${PUBLISH_INTERVAL_S:-5.0}
+      LOG_LEVEL: INFO
+
+  sim-control-frontend:
+    build:
+      context: services/sim-control/frontend
+      dockerfile: Dockerfile
+    container_name: campus-sim-control-frontend
+    restart: unless-stopped
+    networks: [campus]
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - sim-control-backend
 
 #==========================================================================
 # Gateway — Kong (DB-less) + Keycloak JWKS → Kong JWT config init

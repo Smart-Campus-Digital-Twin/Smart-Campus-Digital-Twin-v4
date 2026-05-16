@@ -1,9 +1,9 @@
 """
 ML Consumer — Kafka → InfluxDB + Postgres anomaly store.
 
-Replaces Flink stream processing. Reads sensor data from Kafka topics,
-writes time-series to InfluxDB, runs anomaly detection rules, persists
-anomaly events to Postgres, and optionally loads ML models from MLflow.
+Reads sensor data from Kafka topics, writes time-series to InfluxDB,
+runs anomaly detection rules, persists anomaly events to Postgres,
+and optionally loads ML models from MLflow.
 
 Architecture:
   - One AIOKafka consumer per topic group

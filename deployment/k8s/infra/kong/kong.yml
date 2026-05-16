@@ -21,12 +21,12 @@ services:
           - "/grafana"
         strip_path: true
 
-  - name: flink-ui
-    url: http://flink-jobmanager:8081
+  - name: mlflow-ui
+    url: http://mlflow:5000
     routes:
-      - name: flink-web-ui
+      - name: mlflow-web-ui
         paths:
-          - "/flink"
+          - "/mlflow"
         strip_path: true
 
 plugins:

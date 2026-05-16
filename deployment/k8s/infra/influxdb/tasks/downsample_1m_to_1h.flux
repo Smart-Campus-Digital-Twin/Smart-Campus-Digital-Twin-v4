@@ -3,8 +3,7 @@
 // Runs at hh:05 every hour so the previous hour's data is complete.
 // Writes to bucket `campus_1h` with measurement `sensor_1h_<type>`.
 //
-// This replaces the Spark HourlyRollupJob for simpler, native InfluxDB processing.
-// Spark job is kept as backup in processing/spark/jobs/hourly_rollup.py.DISABLED
+// Implemented natively in InfluxDB Flux (no external scheduler required).
 
 option task = {
     name:   "downsample_1m_to_1h",

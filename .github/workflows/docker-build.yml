@@ -37,8 +37,12 @@ jobs:
             campus-ml-consumer:
               - 'services/ml-consumer/consumer/**'
               - 'shared/**'
-            campus-ml-inference:
+            campus-ml-prediction:
               - 'services/ml-prediction/**'
+              - 'shared/**'
+            campus-ml-retrain:
+              - 'services/ml-retrain/**'
+              - 'services/ml-prediction/datasets/**'
               - 'shared/**'
             campus-sim-control-backend:
               - 'services/sim-control/backend/**'
@@ -57,7 +61,8 @@ jobs:
             {"service":"campus-simulator","dockerfile":"services/simulator/Dockerfile","context":"."},
             {"service":"campus-frontend","dockerfile":"services/frontend/Dockerfile","context":"services/frontend"},
             {"service":"campus-ml-consumer","dockerfile":"services/ml-consumer/consumer/Dockerfile","context":"."},
-            {"service":"campus-ml-inference","dockerfile":"services/ml-prediction/Dockerfile","context":".","target":"inference"},
+            {"service":"campus-ml-prediction","dockerfile":"services/ml-prediction/Dockerfile","context":"."},
+            {"service":"campus-ml-retrain","dockerfile":"services/ml-retrain/Dockerfile","context":"."},
             {"service":"campus-sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"services/sim-control/backend"},
             {"service":"campus-sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend"}
           ]'

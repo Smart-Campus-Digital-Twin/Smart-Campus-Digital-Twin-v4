@@ -6,8 +6,6 @@ This service:
 - Exposes REST API for congestion and energy predictions
 - Writes predictions to InfluxDB
 - Handles feature engineering for incoming sensor data
-
-Replaces heavy model loading in Flink jobs.
 """
 from __future__ import annotations
 

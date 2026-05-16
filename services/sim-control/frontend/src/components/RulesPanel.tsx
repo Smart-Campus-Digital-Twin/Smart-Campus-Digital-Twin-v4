@@ -1,17 +1,24 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Trash2, Power } from 'lucide-react';
-const API = 'http://localhost:8000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface R { id: string; name: string; on: boolean; cond: { sid: string; op: string; thr: number }; act: { type: string; tsid: string; val: number; en: boolean | null }; }
 
 export default function RulesPanel() {
   const [rules, setRules] = useState<R[]>([]);
   const [show, setShow] = useState(false);
+  const [err, setErr] = useState('');
   const fetchR = useCallback(async () => {
-    const r = await fetch(API + '/api/rules');
-    const d = await r.json();
-    setRules(d.rules || []);
+    try {
+      const r = await fetch(API + '/api/rules');
+      const d = await r.json();
+      setRules(d.rules || []);
+      setErr('');
+    } catch {
+      setErr('Backend offline. Start sim-control backend on port 8000.');
+      setRules([]);
+    }
   }, []);
   useEffect(() => { fetchR(); }, [fetchR]);
   const del = async (id: string) => { await fetch(API + '/api/rules/' + id, { method: 'DELETE' }); fetchR(); };
@@ -23,6 +30,7 @@ export default function RulesPanel() {
       )
     ),
     React.createElement('div', {className: 'grid gap-3'},
+      err && React.createElement('div', {className: 'bg-red-950 border border-red-800 text-red-200 rounded-xl p-4 text-sm'}, err),
       rules.map((r: R) =>
         React.createElement('div', {key: r.id, className: 'bg-slate-900 border border-slate-700 rounded-xl p-4'},
           React.createElement('div', {className: 'flex items-center justify-between'},

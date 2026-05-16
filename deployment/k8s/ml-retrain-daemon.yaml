@@ -6,7 +6,7 @@ metadata:
   labels:
     app: ml-retrain-daemon
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: ml-retrain-daemon
@@ -15,46 +15,33 @@ spec:
       labels:
         app: ml-retrain-daemon
     spec:
-      initContainers:
-        - name: clone-repo
-          image: alpine/git:2.45.2
-          command:
-            - sh
-            - -c
-            - |
-              git clone --depth 1 --branch main https://github.com/Smart-Campus-Digital-Twin/Smart-Campus-Digital-Twin-v4.git /workspace/repo
-          volumeMounts:
-            - name: repo
-              mountPath: /workspace
       containers:
         - name: ml-retrain-daemon
-          image: python:3.12-slim-bookworm
-          command:
-            - sh
-            - -c
-            - |
-              python -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
-              pip install --no-cache-dir -r /workspace/repo/ml/requirements.txt && \
-              pip install --no-cache-dir 'setuptools<72' && \
-              exec python /workspace/repo/ml/retrain_daemon.py
-          workingDir: /workspace/repo
-          volumeMounts:
-            - name: repo
-              mountPath: /workspace
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-retrain:latest
+          imagePullPolicy: Always
           env:
             - name: MLFLOW_TRACKING_URI
               value: "http://mlflow:5000"
             - name: INFLUXDB_URL
               value: "http://influxdb:8086"
-            - name: PYTHONPATH
-              value: "/workspace/repo"
+            - name: INFLUXDB_ORG
+              value: "smart-campus"
+            - name: INFLUXDB_BUCKET_SENSORS
+              value: "campus_sensors"
+            - name: INFLUXDB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: campus-influxdb
+                  key: INFLUXDB_TOKEN
+                  optional: true
+            - name: TRAIN_DAYS
+              value: "90"
+            - name: DATASETS_DIR
+              value: "/app/datasets"
           resources:
             requests:
-              memory: 256Mi
-              cpu: 100m
+              memory: 512Mi
+              cpu: 200m
             limits:
-              memory: 1Gi
-              cpu: 1
-      volumes:
-        - name: repo
-          emptyDir: {}
+              memory: 2Gi
+              cpu: 2

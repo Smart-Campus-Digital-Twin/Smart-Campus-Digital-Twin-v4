@@ -45,22 +45,26 @@ class InfluxWriter:
         """Write a sensor reading to InfluxDB."""
         await self._ensure_connected()
 
-        measurement = topic.split(".")[-1]  # temperature / occupancy / energy
+        measurement = str(payload.get("sensor_type") or topic.split(".")[-1])
         room_id = str(payload.get("room_id", "unknown"))
         sensor_id = str(payload.get("sensor_id", "unknown"))
+        building_id = str(payload.get("building_id") or payload.get("building") or "unknown")
 
         # Build Point based on measurement type
         point = (
             Point(measurement)
             .tag("room_id", room_id)
             .tag("sensor_id", sensor_id)
-            .tag("building", str(payload.get("building", "unknown")))
+            .tag("building_id", building_id)
+            .tag("floor", str(payload.get("floor", "unknown")))
             .tag("behavior_mode", str(payload.get("behavior_mode", "normal")))
+            .tag("unit", str(payload.get("unit", "")))
         )
 
         if measurement == "temperature":
             val = payload.get("value") or payload.get("temperature")
             if val is not None:
+                point = point.field("value", float(val))
                 point = point.field("celsius", float(val))
             humidity = payload.get("humidity")
             if humidity is not None:
@@ -69,11 +73,13 @@ class InfluxWriter:
         elif measurement == "occupancy":
             val = payload.get("value") or payload.get("occupancy") or payload.get("count")
             if val is not None:
+                point = point.field("value", float(val))
                 point = point.field("count", int(val))
 
         elif measurement == "energy":
             val = payload.get("value") or payload.get("energy") or payload.get("kwh")
             if val is not None:
+                point = point.field("value", float(val))
                 point = point.field("kwh", float(val))
             power = payload.get("power_kw")
             if power is not None:
@@ -85,8 +91,12 @@ class InfluxWriter:
             if val is not None:
                 point = point.field("value", float(val))
 
+        quality = payload.get("quality")
+        if quality is not None:
+            point = point.field("quality", float(quality))
+
         # Timestamp from payload or now
-        ts = payload.get("timestamp") or payload.get("ts")
+        ts = payload.get("timestamp_ms") or payload.get("timestamp") or payload.get("ts")
         if ts:
             try:
                 if isinstance(ts, (int, float)):

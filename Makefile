@@ -1,7 +1,7 @@
 # Smart Campus Digital Twin — development helpers
 # Requires: docker, docker-compose, python >= 3.12, kcat (optional)
 
-.PHONY: help env up down dev logs ps build test lint clean ml-bootstrap ml-train ml-status frontend-update frontend-build frontend-up
+.PHONY: help env up down dev logs ps build test lint clean ml-train ml-status ml-prediction-logs ml-prediction-restart ml-retrain-logs frontend-update frontend-build frontend-up
 
 COMPOSE      = docker compose -f docker-compose.yml
 COMPOSE_DEV  = docker compose -f docker-compose.dev.yml
@@ -39,23 +39,11 @@ ps: ## Show running containers and health
 
 ##@ Machine Learning
 
-ml-bootstrap: ## Generate base datasets and train+promote all 3 models (first run)
-	@echo "Starting MLflow if not running..."
-	$(COMPOSE) up -d mlflow
-	@sleep 3
-	@echo "Running bootstrap training inside ml-training container..."
-	$(COMPOSE) run --rm ml-training \
-		python /opt/campus/ml/bootstrap_training.py
-	@echo ""
-	@echo "  ✓ Base models trained and promoted to Production."
-	@echo "  MLflow UI → http://localhost:5000"
-
-ml-train: ## Re-run all Kedro pipelines (re-training, no dataset regeneration)
-	$(COMPOSE) run --rm ml-training \
-		python /opt/campus/ml/bootstrap_training.py --skip-generate
+ml-train: ## Run one-shot retrain (canteen, library, energy) against running MLflow
+	$(COMPOSE) run --rm ml-retrain python retrain.py
 
 ml-status: ## Show current Production model versions in MLflow
-	$(COMPOSE) run --rm ml-training \
+	$(COMPOSE) run --rm ml-retrain \
 		python -c "\
 import mlflow, os; \
 mlflow.set_tracking_uri(os.environ.get('MLFLOW_TRACKING_URI','http://mlflow:5000')); \
@@ -65,17 +53,11 @@ client = mlflow.tracking.MlflowClient(); \
  for v in (client.get_latest_versions(m, stages=['Production']) or [{'version':'NONE','run_id':''}])]\
 "
 
-ml-deploy: ## Deploy updated ML pipeline with prediction service
-	@./scripts/deploy_ml_pipeline.sh
-
-ml-train-all: ## Train all ML models (canteen, library, energy)
-	@./scripts/train_ml_models.sh
-
-ml-verify: ## Verify ML pipeline is working correctly
-	@./scripts/verify_ml_pipeline.sh
-
 ml-prediction-logs: ## Tail logs from ML prediction service
 	docker logs -f campus-ml-prediction
+
+ml-retrain-logs: ## Tail logs from ML retrain scheduler
+	docker logs -f campus-ml-retrain
 
 ml-prediction-restart: ## Restart ML prediction service (reload models)
 	$(COMPOSE) restart ml-prediction

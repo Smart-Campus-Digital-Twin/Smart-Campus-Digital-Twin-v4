@@ -1,0 +1,191 @@
+[
+  {
+    "id": "43d4865b-71ad-4a4b-ae3a-4249bb125b8e",
+    "timestamp": "2026-05-16T07:03:50.929066+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "created",
+    "details": "Sensor '1' created",
+    "value": null
+  },
+  {
+    "id": "4b2e8b16-8509-4f04-8a62-9c04ce6ff596",
+    "timestamp": "2026-05-16T07:03:55.197592+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "eb189c7c-c39d-4837-94a6-b9802f348c39",
+    "timestamp": "2026-05-16T07:03:55.727467+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "7b29350c-5283-48f5-8b87-10883491f06e",
+    "timestamp": "2026-05-16T07:03:57.350676+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "13198e77-2b11-48c0-8ae0-598a2f01a1bf",
+    "timestamp": "2026-05-16T07:03:59.052006+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "updated",
+    "details": "mode=random",
+    "value": null
+  },
+  {
+    "id": "8d06e879-774b-4d91-8e7b-601bf0ccb349",
+    "timestamp": "2026-05-16T07:04:00.282169+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "419d2872-4966-4b04-8bda-9c4df7ea5276",
+    "timestamp": "2026-05-16T07:04:00.974940+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "661c3aff-5590-4cf1-bb90-59104f0cd9b7",
+    "timestamp": "2026-05-16T07:04:01.189118+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "1d33006b-2605-48fe-916a-1590dba66768",
+    "timestamp": "2026-05-16T07:04:04.119309+00:00",
+    "sensor_id": "b6225e21-7c92-4a9e-a32b-c7c894f31aae",
+    "sensor_name": "1",
+    "action": "deleted",
+    "details": "Sensor '1' deleted",
+    "value": null
+  },
+  {
+    "id": "80546e03-c727-4f9a-bfce-0d847768d999",
+    "timestamp": "2026-05-16T07:04:14.451590+00:00",
+    "sensor_id": "430140d9-465d-4abe-a6f1-874e6d349b27",
+    "sensor_name": "",
+    "action": "created",
+    "details": "Sensor '' created",
+    "value": null
+  },
+  {
+    "id": "775ded66-01be-4e2d-ad07-4d870ee61804",
+    "timestamp": "2026-05-16T07:04:17.948500+00:00",
+    "sensor_id": "430140d9-465d-4abe-a6f1-874e6d349b27",
+    "sensor_name": "",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "6464d819-fcf5-4a42-b790-dc9e1eaf1705",
+    "timestamp": "2026-05-16T07:04:19.283344+00:00",
+    "sensor_id": "430140d9-465d-4abe-a6f1-874e6d349b27",
+    "sensor_name": "",
+    "action": "deleted",
+    "details": "Sensor '' deleted",
+    "value": null
+  },
+  {
+    "id": "6cdad51d-14fc-42ff-9b4f-cd579743a051",
+    "timestamp": "2026-05-16T07:11:43.088468+00:00",
+    "sensor_id": "",
+    "sensor_name": "",
+    "action": "seeded",
+    "details": "Seeded 695 new sensors (695 total topology)",
+    "value": null
+  },
+  {
+    "id": "6abe6fe9-1166-4c65-80be-17a1230170fd",
+    "timestamp": "2026-05-16T07:26:11.332601+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "updated",
+    "details": "mode=random",
+    "value": null
+  },
+  {
+    "id": "037686ce-4613-488a-a054-c223f7ea778f",
+    "timestamp": "2026-05-16T07:26:12.026786+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "f283b866-1f86-4216-b80c-e373f565ef11",
+    "timestamp": "2026-05-16T07:26:12.296519+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "6753de23-7aba-462b-8c11-7f3cb7f4b5a8",
+    "timestamp": "2026-05-16T07:26:12.519927+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "53cc9c79-8250-4160-a87c-5bd953a41311",
+    "timestamp": "2026-05-16T07:26:12.719893+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "f9f716fc-1598-47bf-a9e0-4ffeaa572b38",
+    "timestamp": "2026-05-16T07:41:52.443318+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "updated",
+    "details": "mode=normal",
+    "value": null
+  },
+  {
+    "id": "e0c4d73b-ebf6-4916-b43b-2c76bf5daa15",
+    "timestamp": "2026-05-16T07:43:56.598575+00:00",
+    "sensor_id": "dept-ete-f3-office-temperature",
+    "sensor_name": "dept-ete-f3-office temperature",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "ffc2360b-48da-4aa3-8835-6b340b91db8e",
+    "timestamp": "2026-05-16T07:43:57.855409+00:00",
+    "sensor_id": "dept-ete-f3-office-temperature",
+    "sensor_name": "dept-ete-f3-office temperature",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  }
+]

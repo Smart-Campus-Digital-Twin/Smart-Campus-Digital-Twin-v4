@@ -1,22 +1,15 @@
 -- PostgreSQL 16 schema bootstrap — Smart Campus Digital Twin
 --
--- NOTE: postgres:16-alpine does NOT support POSTGRES_MULTIPLE_DATABASES (Bitnami only).
--- We create the Airflow database here explicitly so Airflow can start.
-SELECT 'CREATE DATABASE airflow'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow')\gexec
-
 -- Keycloak uses its own database (configured via env/keycloak.env).
 SELECT 'CREATE DATABASE keycloak'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloak')\gexec
 
--- PostgreSQL 16 schema bootstrap — Smart Campus Digital Twin
---
 -- Responsibilities:
 --   * Building / room metadata (referenced by all services as a lookup table)
---   * Daily energy summaries   (written by Spark DailyEnergyReportJob via Airflow)
---   * Anomaly audit log        (written by Flink AnomalyJob via JDBC sink)
---   * Weekly ML feature store  (written by Spark WeeklyMLFeaturesJob via Airflow)
---   * Alert rules              (read by Flink AnomalyJob to configure thresholds)
+--   * Daily energy summaries   (written by ml-consumer rollup or batch job)
+--   * Anomaly audit log        (written by ml-consumer AnomalyDetector)
+--   * Weekly ML feature store  (written by ml-retrain feature pipeline)
+--   * Alert rules              (read by ml-consumer at startup)
 --
 -- Schema conventions:
 --   * All primary keys are either natural keys or UUID TEXT — no SERIAL ints.
@@ -59,14 +52,14 @@ CREATE TABLE IF NOT EXISTS rooms (
 );
 
 COMMENT ON TABLE rooms IS
-    'Individual rooms within buildings. Used as a lookup for capacity checks in Flink.';
+    'Individual rooms within buildings. Used as a lookup for capacity checks by ml-consumer.';
 
 CREATE INDEX IF NOT EXISTS idx_rooms_building
     ON rooms (building_id);
 
 
 -- ==========================================================================
--- Operational data — written by Spark / Flink at runtime
+-- Operational data — written by ml-consumer / ml-retrain at runtime
 -- ==========================================================================
 
 CREATE TABLE IF NOT EXISTS energy_daily (
@@ -83,7 +76,7 @@ CREATE TABLE IF NOT EXISTS energy_daily (
 );
 
 COMMENT ON TABLE energy_daily IS
-    'Per-building daily energy summary. Written by Spark DailyEnergyReportJob via Airflow.
+    'Per-building daily energy summary. Written by the ml-consumer rollup task.
      Use sample_hours < 24 to flag days with missing hourly data.';
 
 CREATE INDEX IF NOT EXISTS idx_energy_daily_building_date
@@ -94,8 +87,8 @@ CREATE TABLE IF NOT EXISTS anomalies (
     anomaly_id   TEXT        PRIMARY KEY,      -- UUID v4 from AnomalyEvent.anomaly_id
     detected_at  TIMESTAMPTZ NOT NULL,
     sensor_id    TEXT        NOT NULL,
-    -- No FK to buildings: Flink writes anomalies in real-time before buildings
-    -- are seeded, and FK violations would silently drop anomaly rows.
+    -- No FK to buildings: ml-consumer writes anomalies in real-time before
+    -- buildings are seeded; FK violations would silently drop anomaly rows.
     building_id  TEXT        NOT NULL,
     floor        INT         NOT NULL,
     room_id      TEXT        NOT NULL,
@@ -109,7 +102,7 @@ CREATE TABLE IF NOT EXISTS anomalies (
 );
 
 COMMENT ON TABLE anomalies IS
-    'Anomaly audit log written by Flink AnomalyJob. Immutable — never UPDATE rows here.
+    'Anomaly audit log written by ml-consumer AnomalyDetector. Immutable — never UPDATE rows here.
      Use for dashboard alert queries and post-incident review.';
 
 CREATE INDEX IF NOT EXISTS idx_anomalies_detected_at
@@ -141,7 +134,7 @@ CREATE TABLE IF NOT EXISTS ml_energy_features (
 
 COMMENT ON TABLE ml_energy_features IS
     'Daily per-building feature vectors for Energy ML model training and evaluation.
-     Written by Airflow DAGs.
+     Written by ml-retrain feature pipeline.
      data_completeness = fraction of expected hourly windows that had data.';
 
 CREATE INDEX IF NOT EXISTS idx_ml_energy_features_bld_date
@@ -149,7 +142,7 @@ CREATE INDEX IF NOT EXISTS idx_ml_energy_features_bld_date
 
 
 -- ==========================================================================
--- Configuration — read by Flink AnomalyJob at startup
+-- Configuration — read by ml-consumer at startup
 -- ==========================================================================
 
 CREATE TABLE IF NOT EXISTS alert_rules (
@@ -165,8 +158,8 @@ CREATE TABLE IF NOT EXISTS alert_rules (
 );
 
 COMMENT ON TABLE alert_rules IS
-    'Configurable anomaly detection thresholds. Read by Flink AnomalyJob on startup.
-     Update rows here and restart the job to change thresholds without code changes.';
+    'Configurable anomaly detection thresholds. Read by ml-consumer on startup.
+     Update rows here and restart the consumer to change thresholds without code changes.';
 
 -- Seed default rules matching the values documented in PIPELINE_ARCHITECTURE.md
 INSERT INTO alert_rules (sensor_type, anomaly_type, threshold, severity, description)
@@ -179,9 +172,9 @@ ON CONFLICT (sensor_type, anomaly_type) DO NOTHING;
 
 
 -- ==========================================================================
--- Staging tables — used by Spark JDBC upsert pattern
+-- Staging tables — used by batch upsert pattern
 -- (write here first, then merge into the real table with ON CONFLICT)
--- Spark's DataFrame.write.jdbc mode="overwrite" truncates these each run.
+-- Truncated each run by the writer.
 -- ==========================================================================
 
 CREATE TABLE IF NOT EXISTS energy_daily_staging (

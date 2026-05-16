@@ -3,9 +3,8 @@
 // Runs at 00:05 daily so the previous day's data is complete.
 // Writes to bucket `campus_1d` with measurement `sensor_1d`.
 //
-// This task is optional — Spark DailyEnergyReportJob also produces
-// daily summaries, but those go to PostgreSQL. This keeps a time-series
-// copy in InfluxDB for Grafana long-range charts.
+// Keeps a time-series copy of daily summaries in InfluxDB for Grafana
+// long-range charts. Postgres holds the canonical per-day rows separately.
 
 option task = {
     name:   "downsample_1h_to_1d",

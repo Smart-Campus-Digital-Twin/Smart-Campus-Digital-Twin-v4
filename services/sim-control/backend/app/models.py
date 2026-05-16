@@ -84,6 +84,7 @@ class SensorReadingOut(BaseModel):
     value: float
     unit: str
     timestamp_ms: int
+    timestamp: str
     quality: float = 1.0
     behavior_mode: str = "normal"
     metadata: dict[str, Any] = Field(default_factory=dict)

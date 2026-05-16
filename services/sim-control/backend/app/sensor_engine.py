@@ -4,6 +4,8 @@ import logging
 import math
 import random
 import time
+from collections import deque
+from datetime import UTC, datetime
 from typing import Any
 
 from .models import BehaviorMode, Sensor, SensorReadingOut
@@ -16,11 +18,15 @@ UNITS: dict[str, str] = {
     "energy": "watt",
 }
 
+HISTORY_LEN = 60
+
 
 class SensorEngine:
     def __init__(self) -> None:
         self._pattern_indices: dict[str, int] = {}
         self._last_values: dict[str, float] = {}
+        self._last_readings: dict[str, dict[str, Any]] = {}
+        self._history: dict[str, deque[tuple[int, float]]] = {}
 
     def generate_reading(self, sensor: Sensor) -> SensorReadingOut | None:
         if not sensor.enabled:
@@ -28,7 +34,8 @@ class SensorEngine:
 
         cfg = sensor.config
         mode = sensor.behavior_mode
-        now_ms = int(time.time() * 1000)
+        now = datetime.now(UTC)
+        now_ms = int(now.timestamp() * 1000)
 
         if mode == BehaviorMode.NORMAL:
             value = self._normal(cfg)
@@ -41,24 +48,42 @@ class SensorEngine:
         else:
             value = self._normal(cfg)
 
+        value = round(value, 2)
         self._last_values[sensor.id] = value
+        buf = self._history.setdefault(sensor.id, deque(maxlen=HISTORY_LEN))
+        buf.append((now_ms, value))
 
-        return SensorReadingOut(
+        reading = SensorReadingOut(
             sensor_id=sensor.id,
             building_id=sensor.building_id,
             floor=sensor.floor,
             room_id=sensor.room_id,
             sensor_type=str(sensor.sensor_type),
-            value=round(value, 2),
+            value=value,
             unit=UNITS.get(str(sensor.sensor_type), "count"),
             timestamp_ms=now_ms,
+            timestamp=now.isoformat(),
             quality=1.0,
             behavior_mode=str(mode),
             metadata={"sensor_name": sensor.name},
         )
+        self._last_readings[sensor.id] = reading.model_dump()
+        return reading
 
     def get_last_value(self, sensor_id: str) -> float:
         return self._last_values.get(sensor_id, 0.0)
+
+    def get_last_reading(self, sensor_id: str) -> dict | None:
+        return self._last_readings.get(sensor_id)
+
+    def get_history(self, sensor_id: str) -> list[tuple[int, float]]:
+        return list(self._history.get(sensor_id, deque()))
+
+    def values_snapshot(self) -> dict[str, dict[str, Any]]:
+        return {
+            sid: {"value": v, "timestamp_ms": self._last_readings.get(sid, {}).get("timestamp_ms")}
+            for sid, v in self._last_values.items()
+        }
 
     def _normal(self, cfg: Any) -> float:
         mid = (cfg.min_value + cfg.max_value) / 2

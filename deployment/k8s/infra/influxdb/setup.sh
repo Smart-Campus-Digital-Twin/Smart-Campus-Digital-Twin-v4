@@ -22,8 +22,8 @@ echo "==> InfluxDB is ready."
 # ------------------------------------------------------------------
 # Buckets — one per retention tier
 # ------------------------------------------------------------------
-# campus_raw  : 7 days  — raw readings, written by Flink at ~1-sec latency
-# campus_1m   : 30 days — 1-min aggregations, written by Flink WindowAggJob
+# campus_raw  : 7 days  — raw readings, written by ml-consumer at ~1-sec latency
+# campus_1m   : 30 days — 1-min aggregations, written by ml-consumer rollup task
 # campus_1h   : 1 year  — 1-hour roll-ups, written by Flux task (downsample_1m_to_1h)
 # campus_1d   : 5 years — daily roll-ups, written by Flux task (downsample_1h_to_1d)
 # ------------------------------------------------------------------

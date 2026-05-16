@@ -186,7 +186,7 @@
     { "id": 9, "title": "Daily Energy — Actual (yesterday, per building)", "type": "barchart",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
       "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
-      "description": "Total kWh per building for yesterday from the Spark daily rollup (runs at 00:30).",
+      "description": "Total kWh per building for yesterday from the daily rollup (runs at 00:30).",
       "options": {
         "orientation": "horizontal",
         "groupWidth": 0.7,
@@ -242,7 +242,7 @@
     { "id": 20,
       "title": "Canteen Congestion — Actual vs Predicted (persons)",
       "type": "timeseries",
-      "description": "Real-time XGBoost predictions from the Flink congestion job. Requires ≥24h of occupancy history per room. Shows 'No data' until the prediction lag warms up.",
+      "description": "Real-time XGBoost predictions from ml-prediction. Requires ≥24h of occupancy history per room. Shows 'No data' until the prediction lag warms up.",
       "gridPos": { "h": 11, "w": 12, "x": 0, "y": 39 },
       "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
       "fieldConfig": {
@@ -280,7 +280,7 @@
     { "id": 21,
       "title": "Library Congestion — Actual vs Predicted (persons)",
       "type": "timeseries",
-      "description": "Real-time XGBoost predictions from the Flink congestion job. Requires ≥24h of occupancy history per room.",
+      "description": "Real-time XGBoost predictions from ml-prediction. Requires ≥24h of occupancy history per room.",
       "gridPos": { "h": 11, "w": 12, "x": 12, "y": 39 },
       "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
       "fieldConfig": {
@@ -318,7 +318,7 @@
     { "id": 22,
       "title": "Energy Forecast vs Actual — Next-Day kWh (per building)",
       "type": "timeseries",
-      "description": "Solid = actual from energy_daily. Dashed = ML next-day forecast from ml_energy_features (written by the Airflow ml_energy_batch_inference DAG at 01:30 daily).",
+      "description": "Solid = actual from energy_daily. Dashed = ML next-day forecast from ml_energy_features (written by the ml-retrain feature pipeline).",
       "gridPos": { "h": 9, "w": 16, "x": 0, "y": 50 },
       "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
       "fieldConfig": {

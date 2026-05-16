@@ -1,0 +1,9 @@
+{
+  "host": "139.59.194.248",
+  "port": 1883,
+  "username": "campus",
+  "password": "campus",
+  "tls_ca_cert": "",
+  "tls_client_cert": "",
+  "tls_client_key": ""
+}

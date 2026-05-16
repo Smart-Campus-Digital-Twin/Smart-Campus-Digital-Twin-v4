@@ -13,6 +13,20 @@ DATA_DIR = Path(os.getenv("SIM_CONTROL_DATA_DIR", Path(__file__).resolve().paren
 SENSORS_FILE = DATA_DIR / "sensors.json"
 RULES_FILE = DATA_DIR / "rules.json"
 LOGS_FILE = DATA_DIR / "logs.json"
+MQTT_CONFIG_FILE = DATA_DIR / "mqtt_config.json"
+
+
+def save_mqtt_config(config: dict) -> None:
+    ensure_data_dir()
+    with open(MQTT_CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+
+def load_mqtt_config() -> dict | None:
+    if not MQTT_CONFIG_FILE.exists():
+        return None
+    with open(MQTT_CONFIG_FILE) as f:
+        return json.load(f)
 
 
 def ensure_data_dir() -> None:

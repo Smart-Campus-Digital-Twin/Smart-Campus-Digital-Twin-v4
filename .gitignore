@@ -7,7 +7,7 @@ architecture_diagram.html
 # Secret env files — only *.env.example files are committed
 env/*.env
 env/.env
-
+develop
 # Python bytecode and cache
 __pycache__/
 *.py[cod]

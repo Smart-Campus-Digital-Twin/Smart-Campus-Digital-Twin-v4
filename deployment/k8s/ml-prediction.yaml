@@ -16,32 +16,10 @@ spec:
       labels:
         app: ml-prediction
     spec:
-      initContainers:
-        - name: clone-repo
-          image: alpine/git:2.45.2
-          command:
-            - sh
-            - -c
-            - |
-              git clone --depth 1 --branch main https://github.com/Smart-Campus-Digital-Twin/Smart-Campus-Digital-Twin-v4.git /workspace/repo
-          volumeMounts:
-            - name: repo
-              mountPath: /workspace
       containers:
         - name: ml-prediction
-          image: python:3.12-slim-bookworm
-          command:
-            - sh
-            - -c
-            - |
-              python -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
-              pip install --no-cache-dir -r /workspace/repo/ml/prediction_service/requirements.txt && \
-              pip install --no-cache-dir 'setuptools<72' && \
-              exec python /workspace/repo/ml/prediction_service/main.py
-          workingDir: /workspace/repo/ml/prediction_service
-          volumeMounts:
-            - name: repo
-              mountPath: /workspace
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-prediction:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8001
               name: http
@@ -65,7 +43,7 @@ spec:
             httpGet:
               path: /health
               port: 8001
-            failureThreshold: 180
+            failureThreshold: 60
             periodSeconds: 10
           readinessProbe:
             httpGet:
@@ -79,9 +57,6 @@ spec:
               port: 8001
             initialDelaySeconds: 0
             periodSeconds: 30
-      volumes:
-        - name: repo
-          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
