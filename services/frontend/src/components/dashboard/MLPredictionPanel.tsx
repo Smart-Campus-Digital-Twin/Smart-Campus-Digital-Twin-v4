@@ -69,7 +69,9 @@ export default function MLPredictionPanel({
           timestamp: new Date().toISOString(),
           avg: actualCount,
           capacity: cap,
-          history: [actualCount, actualCount * 0.9, actualCount * 1.1, actualCount],
+          history: Array.from({ length: 50 }, (_, i) =>
+            i < 47 ? actualCount : [actualCount * 0.9, actualCount * 1.1, actualCount][i - 47]
+          ),
           context: {
             is_weekend: new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : 0,
             lecture_scale: 1.0,

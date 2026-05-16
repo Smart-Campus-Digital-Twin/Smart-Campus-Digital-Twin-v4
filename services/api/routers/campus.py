@@ -164,14 +164,18 @@ async def campus_zones(
         anom_df = None
 
     # ── aggregate per building ──────────────────────────────────────────────
-    occ_lists:  dict[str, list[float]] = defaultdict(list)
+    # Per-building per-room readings keyed on room so a single anomalous
+    # sensor can be clamped against its own room capacity instead of
+    # poisoning the building total.
+    occ_room_vals: dict[str, dict[str, float]] = defaultdict(dict)
     temp_lists: dict[str, list[float]] = defaultdict(list)
-    nrg_lists:  dict[str, list[float]] = defaultdict(list)
+    nrg_lists: dict[str, list[float]] = defaultdict(list)
 
     if df is not None and not df.empty:
         for _, row in df.iterrows():
             bld   = str(row.get("building_id", ""))
             stype = str(row.get("sensor_type", ""))
+            rid   = str(row.get("room_id", ""))
             val   = row.get("_value")
             if not bld or not stype or val is None:
                 continue
@@ -179,7 +183,8 @@ async def campus_zones(
             if stype == "temperature":
                 temp_lists[bld].append(v)
             elif stype == "occupancy":
-                occ_lists[bld].append(v)
+                if rid:
+                    occ_room_vals[bld][rid] = v
             elif stype == "energy":
                 nrg_lists[bld].append(v)
 
@@ -191,14 +196,18 @@ async def campus_zones(
             if bld and cnt is not None:
                 anomaly_counts[bld] = int(cnt)
 
-    # ── get building capacities from PostgreSQL ────────────────────────────
+    # ── building + per-room capacities from PostgreSQL ─────────────────────
     capacity_map: dict[str, int] = {}
+    room_capacity: dict[str, int] = {}
     try:
         rows = await postgres.fetch(
-            "SELECT building_id, SUM(capacity) as total_capacity FROM rooms GROUP BY building_id"
+            "SELECT room_id, building_id, capacity FROM rooms"
         )
         for row in rows:
-            capacity_map[row["building_id"]] = int(row["total_capacity"])
+            bid = row["building_id"]
+            cap = int(row["capacity"]) if row["capacity"] is not None else 0
+            capacity_map[bid] = capacity_map.get(bid, 0) + cap
+            room_capacity[row["room_id"]] = cap
     except Exception:
         pass  # If query fails, fall back to defaults
 
@@ -208,13 +217,31 @@ async def campus_zones(
         bld_id = _ZONE_TO_BUILDING[zone_id]
 
         temps = temp_lists.get(bld_id, [])
-        occs  = occ_lists.get(bld_id,  [])
-        nrgs  = nrg_lists.get(bld_id,  [])
+        room_occ = occ_room_vals.get(bld_id, {})
+        nrgs = nrg_lists.get(bld_id, [])
 
-        has_data = bool(temps or occs or nrgs)
+        has_data = bool(temps or room_occ or nrgs)
 
-        avg_temp  = round(sum(temps) / len(temps), 1) if temps else _DEFAULT["temperature"]
-        total_occ_count = sum(occs) if occs else 0
+        # Temperature: trimmed mean (drop top + bottom value when ≥4 samples
+        # exist so a single broken sensor doesn't drag the building reading).
+        if temps:
+            if len(temps) >= 4:
+                trimmed = sorted(temps)[1:-1]
+            else:
+                trimmed = temps
+            avg_temp = round(sum(trimmed) / len(trimmed), 1)
+        else:
+            avg_temp = _DEFAULT["temperature"]
+
+        # Occupancy: clamp each room reading to its capacity before summing
+        # so anomaly spikes cannot push the total past the building cap.
+        total_occ_count = 0
+        for rid, v in room_occ.items():
+            cap = room_capacity.get(rid)
+            if cap and cap > 0:
+                v = min(v, cap)
+            v = max(0, v)
+            total_occ_count += v
         total_capacity = capacity_map.get(bld_id, 1)
         theoretical_pct = int(round((total_occ_count / total_capacity) * 100)) if total_capacity > 0 else 0
         # Cap the displayed percentage at 100 so a runaway sensor or anomaly
@@ -222,9 +249,16 @@ async def campus_zones(
         # occupancyTheoretical for diagnostics.
         occupancy_pct = min(100, max(0, theoretical_pct))
 
-        total_nrg = sum(nrgs) if nrgs else _DEFAULT["energy"]
+        # Energy: trimmed sum — drop the largest reading when ≥4 sensors so a
+        # single anomalous spike does not dominate the total.
+        if nrgs and len(nrgs) >= 4:
+            total_nrg = sum(sorted(nrgs)[:-1])
+        elif nrgs:
+            total_nrg = sum(nrgs)
+        else:
+            total_nrg = _DEFAULT["energy"]
         energy_kw = round(total_nrg / 1000.0 if total_nrg > 500 else total_nrg, 1)
-        anom_cnt  = anomaly_counts.get(bld_id, 0)
+        anom_cnt = anomaly_counts.get(bld_id, 0)
 
         zones.append(ZoneData(
             id=zone_id,
@@ -272,7 +306,7 @@ class AnomalyEntry(BaseModel):
     value: dict | float | int | str
 
 
-_STALE_AFTER_S = 60   # sensor considered broken if no reading in 60s
+_STALE_AFTER_S = 120  # sensor considered broken if no reading in 120s
 
 
 @router.get(

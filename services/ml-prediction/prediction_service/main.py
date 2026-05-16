@@ -129,10 +129,19 @@ app = FastAPI(
 
 # ── Feature Engineering ───────────────────────────────────────────────────────
 def build_congestion_features(req: CongestionPredictionRequest) -> np.ndarray | None:
-    """Build feature vector for congestion prediction."""
-    history = req.history
-    if len(history) < max(LAGS_NEEDED):
-        return None
+    """Build feature vector for congestion prediction.
+
+    Callers commonly have only a short live history available. Pad the
+    front of the buffer with the mean of what we do have (or req.avg as
+    a last resort) so the model can always return a baseline prediction
+    rather than a 400. This acts as a "base model" fallback while real
+    history accumulates.
+    """
+    history = list(req.history)
+    needed = max(LAGS_NEEDED)
+    if len(history) < needed:
+        fill = float(np.mean(history)) if history else float(req.avg)
+        history = [fill] * (needed - len(history)) + history
 
     ts = datetime.fromisoformat(req.timestamp)
     hour = ts.hour + ts.minute / 60.0
@@ -196,10 +205,7 @@ async def predict_congestion(req: CongestionPredictionRequest):
 
     features = build_congestion_features(req)
     if features is None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Insufficient history: need {max(LAGS_NEEDED)} values, got {len(req.history)}",
-        )
+        raise HTTPException(status_code=500, detail="Feature build returned no vector")
 
     try:
         df = pd.DataFrame(features)
