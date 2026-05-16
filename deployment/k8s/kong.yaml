@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: campus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      initContainers:
+        # Fetch Keycloak JWKS, derive issuer, render declarative kong.yml with JWT consumer
+        - name: kong-config-render
+          image: alpine:3.19
+          env:
+            - name: KEYCLOAK_INTERNAL_URL
+              value: "http://keycloak:8080/auth"
+            - name: KEYCLOAK_REALM
+              value: "campus"
+            - name: JWT_ISSUER
+              value: "https://campus.165-245-144-106.nip.io/auth/realms/campus"
+            - name: KONG_TEMPLATE_PATH
+              value: "/template/kong.yml"
+            - name: KONG_OUT_PATH
+              value: "/kong-config/kong.yml"
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache curl python3 py3-requests py3-cryptography > /dev/null
+
+              # Wait for Keycloak
+              until curl -sf "${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}" > /dev/null 2>&1; do
+                echo "Waiting for Keycloak..."; sleep 5
+              done
+
+              # Wait for API
+              until curl -sf http://api:8000/health > /dev/null 2>&1; do
+                echo "Waiting for API..."; sleep 5
+              done
+
+              echo "JWT issuer: ${JWT_ISSUER}"
+              python3 /scripts/render_kong_config.py
+
+          volumeMounts:
+            - name: kong-template
+              mountPath: /template
+            - name: kong-render-scripts
+              mountPath: /scripts
+            - name: kong-config
+              mountPath: /kong-config
+
+      containers:
+        - name: kong
+          image: kong:3.7
+          ports:
+            - containerPort: 8000
+              name: proxy
+            - containerPort: 8443
+              name: proxy-ssl
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: /kong-config/kong.yml
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000, 0.0.0.0:8443 ssl"
+            - name: KONG_SSL_CERT
+              value: /etc/kong/tls/tls.crt
+            - name: KONG_SSL_CERT_KEY
+              value: /etc/kong/tls/tls.key
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+            - name: KONG_PROXY_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_PROXY_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_NGINX_HTTP_UPSTREAM_KEEPALIVE
+              value: "60"
+          volumeMounts:
+            - name: kong-config
+              mountPath: /kong-config
+            - name: kong-tls
+              mountPath: /etc/kong/tls
+              readOnly: true
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 512Mi
+              cpu: 300m
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+      volumes:
+        - name: kong-template
+          configMap:
+            name: kong-template
+        - name: kong-render-scripts
+          configMap:
+            name: kong-render-scripts
+        - name: kong-config
+          emptyDir: {}
+        - name: kong-tls
+          secret:
+            secretName: kong-tls
+            optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong
+  namespace: campus
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-reserved-ip: "129.212.216.214"
+spec:
+  selector:
+    app: kong
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+      name: proxy
+    - port: 443
+      targetPort: 8443
+      name: proxy-ssl

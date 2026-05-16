@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulator
+  namespace: campus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simulator
+  template:
+    metadata:
+      labels:
+        app: simulator
+    spec:
+      containers:
+        - name: simulator
+          image: campus-simulator:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: campus-common
+            - secretRef:
+                name: campus-mqtt
+          env:
+            - name: ANOMALY_INJECTION_ENABLED
+              value: "true"
+            - name: ANOMALY_INJECTION_PROB
+              value: "0.01"
+            - name: MQTT_PORT
+              value: "9001"
+          ports:
+            - containerPort: 8002
+              name: webui
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator
+  namespace: campus
+spec:
+  selector:
+    app: simulator
+  ports:
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002

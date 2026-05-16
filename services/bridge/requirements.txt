@@ -1,0 +1,6 @@
+paho-mqtt==2.1.0
+aiokafka==0.11.0
+aiohttp==3.9.5
+pydantic==2.7.4
+pydantic-settings==2.3.4
+cramjam==2.8.0

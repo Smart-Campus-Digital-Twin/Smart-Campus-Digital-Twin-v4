@@ -1,0 +1,109 @@
+# Sri Lanka public holidays — 2023 through 2026.
+# Add a new year block to extend coverage; nothing else needs to change.
+
+holidays:
+  2023:
+    - {date: "2023-01-15", name: "Tamil Thai Pongal Day"}
+    - {date: "2023-02-04", name: "National Day"}
+    - {date: "2023-02-05", name: "Navam Full Moon Poya"}
+    - {date: "2023-02-18", name: "Mahasivarathri Day"}
+    - {date: "2023-03-07", name: "Madin Full Moon Poya"}
+    - {date: "2023-04-05", name: "Bak Full Moon Poya"}
+    - {date: "2023-04-07", name: "Good Friday"}
+    - {date: "2023-04-13", name: "Sinhala & Tamil New Year Eve"}
+    - {date: "2023-04-14", name: "Sinhala & Tamil New Year"}
+    - {date: "2023-04-21", name: "Id-Ul-Fitr"}
+    - {date: "2023-05-01", name: "Labour Day"}
+    - {date: "2023-05-05", name: "Vesak Full Moon Poya"}
+    - {date: "2023-05-06", name: "Vesak Full Moon Poya (holiday)"}
+    - {date: "2023-06-04", name: "Poson Full Moon Poya"}
+    - {date: "2023-06-29", name: "Id-Ul-Adha"}
+    - {date: "2023-07-03", name: "Esala Full Moon Poya"}
+    - {date: "2023-08-01", name: "Nikini Full Moon Poya"}
+    - {date: "2023-08-28", name: "Milad-Un-Nabi"}
+    - {date: "2023-09-29", name: "Binara Full Moon Poya"}
+    - {date: "2023-10-28", name: "Vap Full Moon Poya"}
+    - {date: "2023-11-12", name: "Deepavali Festival Day"}
+    - {date: "2023-11-27", name: "Ill Full Moon Poya"}
+    - {date: "2023-12-25", name: "Christmas Day"}
+    - {date: "2023-12-26", name: "Unduvap Full Moon Poya"}
+
+  2024:
+    - {date: "2024-01-15", name: "Tamil Thai Pongal Day"}
+    - {date: "2024-01-25", name: "Duruthu Full Moon Poya"}
+    - {date: "2024-02-04", name: "National Day"}
+    - {date: "2024-02-24", name: "Navam Full Moon Poya"}
+    - {date: "2024-03-08", name: "Mahasivarathri Day"}
+    - {date: "2024-03-25", name: "Madin Full Moon Poya"}
+    - {date: "2024-03-29", name: "Good Friday"}
+    - {date: "2024-04-10", name: "Id-Ul-Fitr"}
+    - {date: "2024-04-13", name: "Sinhala & Tamil New Year Eve"}
+    - {date: "2024-04-14", name: "Sinhala & Tamil New Year (Bak Poya)"}
+    - {date: "2024-05-01", name: "Labour Day"}
+    - {date: "2024-05-23", name: "Vesak Full Moon Poya"}
+    - {date: "2024-05-24", name: "Vesak Full Moon Poya (holiday)"}
+    - {date: "2024-06-17", name: "Id-Ul-Adha"}
+    - {date: "2024-06-21", name: "Poson Full Moon Poya"}
+    - {date: "2024-07-20", name: "Esala Full Moon Poya"}
+    - {date: "2024-08-19", name: "Nikini Full Moon Poya"}
+    - {date: "2024-09-15", name: "Milad-Un-Nabi"}
+    - {date: "2024-09-17", name: "Binara Full Moon Poya"}
+    - {date: "2024-10-17", name: "Vap Full Moon Poya"}
+    - {date: "2024-11-01", name: "Deepavali Festival Day"}
+    - {date: "2024-11-15", name: "Ill Full Moon Poya"}
+    - {date: "2024-12-15", name: "Unduvap Full Moon Poya"}
+    - {date: "2024-12-25", name: "Christmas Day"}
+
+  2025:
+    - {date: "2025-01-13", name: "Duruthu Full Moon Poya"}
+    - {date: "2025-01-14", name: "Tamil Thai Pongal Day"}
+    - {date: "2025-02-04", name: "National Day"}
+    - {date: "2025-02-12", name: "Navam Full Moon Poya"}
+    - {date: "2025-02-26", name: "Mahasivarathri Day"}
+    - {date: "2025-03-13", name: "Madin Full Moon Poya"}
+    - {date: "2025-03-30", name: "Id-Ul-Fitr"}
+    - {date: "2025-04-12", name: "Bak Full Moon Poya"}
+    - {date: "2025-04-13", name: "Sinhala & Tamil New Year Eve"}
+    - {date: "2025-04-14", name: "Sinhala & Tamil New Year"}
+    - {date: "2025-04-18", name: "Good Friday"}
+    - {date: "2025-05-01", name: "Labour Day"}
+    - {date: "2025-05-12", name: "Vesak Full Moon Poya"}
+    - {date: "2025-05-13", name: "Vesak Full Moon Poya (holiday)"}
+    - {date: "2025-06-06", name: "Id-Ul-Adha (approximate)"}
+    - {date: "2025-06-11", name: "Poson Full Moon Poya"}
+    - {date: "2025-07-10", name: "Esala Full Moon Poya"}
+    - {date: "2025-08-09", name: "Nikini Full Moon Poya"}
+    - {date: "2025-09-05", name: "Milad-Un-Nabi (approximate)"}
+    - {date: "2025-09-07", name: "Binara Full Moon Poya"}
+    - {date: "2025-10-07", name: "Vap Full Moon Poya"}
+    - {date: "2025-10-20", name: "Deepavali Festival Day"}
+    - {date: "2025-11-05", name: "Ill Full Moon Poya"}
+    - {date: "2025-12-04", name: "Unduvap Full Moon Poya"}
+    - {date: "2025-12-25", name: "Christmas Day"}
+
+  2026:
+    - {date: "2026-01-03", name: "Duruthu Full Moon Poya"}
+    - {date: "2026-01-15", name: "Tamil Thai Pongal Day"}
+    - {date: "2026-02-01", name: "Navam Full Moon Poya"}
+    - {date: "2026-02-04", name: "National Day"}
+    - {date: "2026-02-15", name: "Mahasivarathri Day"}
+    - {date: "2026-03-02", name: "Madin Full Moon Poya"}
+    - {date: "2026-03-21", name: "Id-Ul-Fitr"}
+    - {date: "2026-04-01", name: "Bak Full Moon Poya"}
+    - {date: "2026-04-03", name: "Good Friday"}
+    - {date: "2026-04-13", name: "Sinhala & Tamil New Year Eve"}
+    - {date: "2026-04-14", name: "Sinhala & Tamil New Year"}
+    - {date: "2026-05-01", name: "Labour Day"}
+    - {date: "2026-05-28", name: "Idul Adha"}
+    - {date: "2026-05-30", name: "Vesak Full Moon Poya"}
+    - {date: "2026-05-31", name: "Vesak Full Moon Poya (holiday)"}
+    - {date: "2026-06-29", name: "Poson Full Moon Poya"}
+    - {date: "2026-07-29", name: "Esala Full Moon Poya"}
+    - {date: "2026-08-26", name: "Milad-Un-Nabi"}
+    - {date: "2026-08-27", name: "Nikini Full Moon Poya"}
+    - {date: "2026-09-26", name: "Binara Full Moon Poya"}
+    - {date: "2026-10-25", name: "Vap Full Moon Poya"}
+    - {date: "2026-11-08", name: "Deepavali Festival Day"}
+    - {date: "2026-11-24", name: "Ill Full Moon Poya"}
+    - {date: "2026-12-23", name: "Unduvap Full Moon Poya"}
+    - {date: "2026-12-25", name: "Christmas Day"}

@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mosquitto-data
+  namespace: campus
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mosquitto
+  namespace: campus
+spec:
+  serviceName: mosquitto
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      initContainers:
+        - name: generate-passwd
+          image: eclipse-mosquitto:2
+          command:
+            - sh
+            - -c
+            - |
+              cp /tmp/config/mosquitto.conf /mosquitto/config/mosquitto.conf
+              ls -la /mosquitto/data
+              if [ ! -f /mosquitto/data/passwd ]; then
+                echo "Generating password file..."
+                mosquitto_passwd -c -b /mosquitto/data/passwd "$MQTT_USERNAME" "$MQTT_PASSWORD"
+              fi
+              ls -la /mosquitto/data
+              chown -R 1883:1883 /mosquitto/config /mosquitto/data
+          env:
+            - name: MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: campus-mqtt
+                  key: MQTT_USERNAME
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: campus-mqtt
+                  key: MQTT_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /mosquitto/data
+            - name: config-dir
+              mountPath: /mosquitto/config
+            - name: config-map
+              mountPath: /tmp/config
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2
+          ports:
+            - containerPort: 1883
+              name: mqtt
+            - containerPort: 9001
+              name: websocket
+          volumeMounts:
+            - name: data
+              mountPath: /mosquitto/data
+            - name: tls
+              mountPath: /mosquitto/tls
+              readOnly: true
+            - name: config-dir
+              mountPath: /mosquitto/config
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 25m
+            limits:
+              memory: 64Mi
+              cpu: 50m
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mosquitto-data
+        - name: tls
+          secret:
+            secretName: kong-tls
+            optional: true
+        - name: config-dir
+          emptyDir: {}
+        - name: config-map
+          configMap:
+            name: mosquitto-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  namespace: campus
+spec:
+  selector:
+    app: mosquitto
+  ports:
+    - port: 1883
+      targetPort: 1883
+      name: mqtt
+    - port: 9001
+      targetPort: 9001
+      name: websocket
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto-external
+  namespace: campus
+spec:
+  selector:
+    app: mosquitto
+  type: LoadBalancer
+  ports:
+    - port: 1883
+      targetPort: 1883
+      name: mqtt
+    - port: 9001
+      targetPort: 9001
+      name: websocket

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-observer
+  namespace: campus
+  labels:
+    app: postgres-observer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-observer
+  template:
+    metadata:
+      labels:
+        app: postgres-observer
+    spec:
+      containers:
+        - name: adminer
+          image: michalhosna/adminer:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ADMINER_DEFAULT_SERVER
+              value: postgres
+            - name: ADMINER_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: campus-postgres
+                  key: POSTGRES_USER
+            - name: ADMINER_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: campus-postgres
+                  key: POSTGRES_PASSWORD
+            - name: ADMINER_DEFAULT_DB
+              valueFrom:
+                secretKeyRef:
+                  name: campus-postgres
+                  key: POSTGRES_DB
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 25m
+            limits:
+              memory: 128Mi
+              cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-observer
+  namespace: campus
+spec:
+  selector:
+    app: postgres-observer
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP

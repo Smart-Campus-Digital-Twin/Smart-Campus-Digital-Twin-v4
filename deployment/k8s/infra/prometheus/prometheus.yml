@@ -1,0 +1,52 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: smart-campus
+
+scrape_configs:
+
+  # ── Prometheus self-monitoring ──────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+
+  # ── Node exporter — host OS metrics (CPU, mem, disk, network) ──────────────
+  - job_name: node
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [campus]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: node-exporter
+      - source_labels: [__address__]
+        action: replace
+        regex: (.+)
+        replacement: ${1}:9100
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node
+
+  # ── InfluxDB ─────────────────────────────────────────────────────────────────
+  - job_name: influxdb
+    metrics_path: /metrics
+    static_configs:
+      - targets: [influxdb:8086]
+
+  # ── Kafka via kafka-exporter ─────────────────────────────────────────────────
+  - job_name: kafka
+    static_configs:
+      - targets: [kafka-exporter:9308]
+
+  # ── PostgreSQL via postgres-exporter ─────────────────────────────────────────
+  - job_name: postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+
+  # ── FastAPI backend ─────────────────────────────────────────────────────────
+  - job_name: api
+    static_configs:
+      - targets: [api:8000]
+    metrics_path: /metrics

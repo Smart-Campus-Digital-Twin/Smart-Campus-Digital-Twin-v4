@@ -1,0 +1,6 @@
+{
+  "run_id": "8c8696ba25294e9e97ff1f3f79e938ed",
+  "model_name": "campus_canteen_congestion",
+  "mae": 0.8087050370395462,
+  "rmse": 2.763759805173909
+}

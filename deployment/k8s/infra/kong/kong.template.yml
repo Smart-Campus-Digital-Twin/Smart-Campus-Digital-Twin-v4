@@ -1,0 +1,144 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  # ── ACME HTTP-01 challenge (cert-manager) ───────────────────────────────
+  - name: acme-http-solver
+    url: http://cm-acme-http-solver.campus.svc.cluster.local:8089
+    routes:
+      - name: acme-challenge
+        paths: ["/.well-known/acme-challenge"]
+        strip_path: false
+        preserve_host: true
+
+  # ── Campus REST API ──────────────────────────────────────────────────────
+  - name: campus-api
+    url: http://api:8000
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: api-all
+        paths: ["/api"]
+        strip_path: true
+
+  # ── WebSocket pass-through ───────────────────────────────────────────────
+  - name: campus-api-ws
+    url: http://api:8000
+    routes:
+      - name: api-ws
+        paths: ["/ws"]
+        strip_path: false
+
+  # ── Keycloak auth endpoints ──────────────────────────────────────────────
+  - name: keycloak-svc
+    url: http://keycloak:8080
+    connect_timeout: 5000
+    read_timeout: 30000
+    write_timeout: 30000
+    routes:
+      - name: keycloak-auth
+        paths: ["/auth"]
+        strip_path: false
+
+  # /resources/* → KC at /auth/resources/* (admin console static assets)
+  - name: keycloak-resources-svc
+    url: http://keycloak:8080/auth
+    connect_timeout: 5000
+    read_timeout: 30000
+    write_timeout: 30000
+    routes:
+      - name: keycloak-resources
+        paths: ["/resources"]
+        strip_path: false
+
+  # ── Grafana dashboards ───────────────────────────────────────────────────
+  - name: grafana-svc
+    url: http://grafana:3000
+    routes:
+      - name: grafana-ui
+        paths: ["/grafana"]
+        strip_path: true
+
+  # ── Simulator UI ─────────────────────────────────────────────────────────
+  - name: simulator-svc
+    url: http://simulator.campus-simulator.svc.cluster.local:8002
+    routes:
+      - name: simulator-ui
+        paths: ["/simulator"]
+        strip_path: true
+
+  # ── Mosquitto WebSocket ──────────────────────────────────────────────────
+  - name: mosquitto-ws
+    url: http://mosquitto:9001
+    routes:
+      - name: mqtt-ws
+        paths: ["/mqtt"]
+        strip_path: true
+
+  # ── Frontend ─────────────────────────────────────────────────────────────
+  - name: frontend-svc
+    url: http://frontend:80
+    routes:
+      - name: frontend-ui
+        paths: ["/"]
+        strip_path: false
+
+plugins:
+  # Redirect any plain HTTP request to HTTPS nip.io hostname.
+  # Skips /.well-known/acme-challenge so cert-manager renewals keep working.
+  - name: pre-function
+    config:
+      access:
+        - |
+          local scheme = kong.request.get_scheme()
+          local path = kong.request.get_path()
+          if scheme == "http" and not string.find(path, "^/%.well%-known/acme%-challenge") then
+            local fullpath = kong.request.get_path_with_query()
+            return kong.response.exit(301, "", { ["Location"] = "https://campus.165-245-144-106.nip.io" .. kong.request.get_path_with_query() })
+          end
+
+  # Global rate limiting
+  - name: rate-limiting
+    config:
+      minute: 600
+      policy: local
+
+  # Global CORS
+  - name: cors
+    config:
+      origins:
+        - "http://localhost:3001"
+        - "http://campus.local"
+        - "http://localhost:80"
+        - "http://129.212.208.120"
+        - "https://campus.165-245-144-106.nip.io"
+        - "http://165.245.144.106"
+      methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      headers:
+        - Authorization
+        - Content-Type
+        - Accept
+        - X-Requested-With
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  # JWT validation on /api — validates Keycloak RS256 tokens
+  - name: jwt
+    service: campus-api
+    config:
+      key_claim_name: iss
+      claims_to_verify:
+        - exp
+      run_on_preflight: false
+
+consumers:
+  - username: keycloak
+    jwt_secrets:
+      - key: "__JWT_ISSUER__"
+        algorithm: RS256
+        rsa_public_key: |
+          __JWT_RSA_PUBLIC_KEY__

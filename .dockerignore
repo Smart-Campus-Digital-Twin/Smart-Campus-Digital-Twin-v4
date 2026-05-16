@@ -1,0 +1,36 @@
+# Version control — never needed inside an image
+.git
+.gitignore
+.github
+
+# Python bytecode
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Tests — not shipped in production images
+tests/
+conftest.py
+**/.pytest_cache/
+
+# ML training datasets — large binaries never needed inside any image
+ml/datasets/
+ml/**/__pycache__/
+ml/**/*.pyc
+
+# Dev/CI tooling
+memory/
+.github/
+docker-compose.dev.yml
+pyproject.toml
+Makefile
+
+# Frontend submodule — exclude build artifacts (rebuilt inside image)
+frontend/frontend/node_modules/
+frontend/frontend/.next/
+frontend/frontend/.env*
+
+# Secrets — must never be baked into images
+env/*.env
+.env
+.env.*

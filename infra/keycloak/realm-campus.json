@@ -1,0 +1,50 @@
+{
+  "realm": "campus",
+  "enabled": true,
+  "displayName": "Smart Campus",
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "campus-frontend",
+      "name": "Campus Frontend",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "implicitFlowEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["+"]
+    },
+    {
+      "clientId": "campus-dev",
+      "name": "Campus Dev Client",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "implicitFlowEnabled": false,
+      "frontchannelLogout": false
+    }
+  ],
+  "users": [
+    {
+      "username": "dev",
+      "enabled": true,
+      "firstName": "Dev",
+      "lastName": "User",
+      "email": "dev@example.com",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

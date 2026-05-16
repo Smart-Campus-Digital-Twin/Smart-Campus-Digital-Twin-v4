@@ -1,0 +1,49 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: smart-campus
+
+scrape_configs:
+
+  # ── Prometheus self-monitoring ──────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+
+  # ── Flink JobManager + TaskManager ─────────────────────────────────────────
+  # Prometheus reporter exposes metrics on port 9249 (configured in FLINK_PROPERTIES)
+  - job_name: flink
+    static_configs:
+      - targets:
+          - flink-jobmanager:9249
+          - flink-taskmanager:9249
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '([^:]+):.+'
+        target_label: instance
+
+  # ── InfluxDB ─────────────────────────────────────────────────────────────────
+  # InfluxDB 2.x exposes Prometheus-format metrics natively at /metrics
+  - job_name: influxdb
+    metrics_path: /metrics
+    static_configs:
+      - targets: [influxdb:8086]
+
+  # ── Kafka via kafka-exporter ─────────────────────────────────────────────────
+  - job_name: kafka
+    static_configs:
+      - targets: [kafka-exporter:9308]
+
+  # ── PostgreSQL via postgres-exporter ─────────────────────────────────────────
+  - job_name: postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+
+  # ── FastAPI backend ─────────────────────────────────────────────────────────
+  # FastAPI exposes /metrics via prometheus-fastapi-instrumentator if installed;
+  # Flink bridge metrics are scraped separately on port 9090.
+  - job_name: bridge
+    static_configs:
+      - targets: [bridge:9090]
+    metrics_path: /metrics

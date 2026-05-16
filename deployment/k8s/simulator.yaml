@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulator
+  namespace: campus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simulator
+  template:
+    metadata:
+      labels:
+        app: simulator
+    spec:
+      containers:
+        - name: simulator
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-simulator:latest
+          imagePullPolicy: Always
+          env:
+            - name: MQTT_HOST
+              value: "mosquitto.campus.svc.cluster.local"
+            - name: MQTT_PORT
+              value: "1883"
+            - name: MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: campus-mqtt
+                  key: MQTT_USERNAME
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: campus-mqtt
+                  key: MQTT_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka.campus.svc.cluster.local:9092"
+          ports:
+            - containerPort: 8002
+              name: http
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 150m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator
+  namespace: campus
+spec:
+  selector:
+    app: simulator
+  ports:
+    - port: 8002
+      targetPort: 8002
+      name: http

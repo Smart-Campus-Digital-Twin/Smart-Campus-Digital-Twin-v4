@@ -1,0 +1,208 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MQTT → Kafka bridge — self-contained, no custom image required.
+# Uses python:3.11-slim; pip install runs in initContainer so restarts are fast.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bridge-script
+  namespace: campus
+data:
+  bridge.py: |
+    #!/usr/bin/env python3
+    import os, sys, threading, time, json
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import paho.mqtt.client as mqtt
+    from kafka import KafkaProducer
+    from kafka.errors import NoBrokersAvailable
+
+    MQTT_HOST     = os.environ.get("MQTT_HOST", "mosquitto")
+    MQTT_PORT     = int(os.environ.get("MQTT_PORT", "1883"))
+    MQTT_USERNAME = os.environ.get("MQTT_USERNAME", "")
+    MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")
+    KAFKA_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+
+    TOPIC_MAP = {
+        "campus/temperature": "sensors.temperature",
+        "campus/occupancy":   "sensors.occupancy",
+        "campus/energy":      "sensors.energy",
+    }
+    DLQ_TOPIC = os.environ.get("KAFKA_TOPIC_DLQ", "sensors.dlq")
+
+    _producer  = None
+    _connected = False
+    _counters  = {"sent": 0, "errors": 0}
+
+    def on_connect(client, userdata, flags, rc, props=None):
+        global _connected
+        if rc == 0:
+            print(f"MQTT connected to {MQTT_HOST}:{MQTT_PORT}", flush=True)
+            client.subscribe("campus/#", qos=1)
+            _connected = True
+        else:
+            print(f"MQTT connect failed rc={rc}", flush=True)
+
+    def on_disconnect(client, userdata, flags, rc, props=None):
+        global _connected
+        _connected = False
+        print(f"MQTT disconnected rc={rc}", flush=True)
+
+    def on_message(client, userdata, msg):
+        kafka_topic = TOPIC_MAP.get(msg.topic, DLQ_TOPIC)
+        try:
+            _producer.send(kafka_topic, value=msg.payload, key=msg.topic.encode())
+            _counters["sent"] += 1
+            if _counters["sent"] % 100 == 0:
+                print(f"Forwarded {_counters['sent']} messages", flush=True)
+        except Exception as e:
+            _counters["errors"] += 1
+            print(f"Kafka send error ({kafka_topic}): {e}", flush=True)
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = json.dumps({
+                "status":    "ok" if _connected else "starting",
+                "mqtt":      "up" if _connected else "down",
+                "sent":      _counters["sent"],
+                "errors":    _counters["errors"],
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        def log_message(self, *args):
+            pass
+
+    def run_health():
+        HTTPServer(("0.0.0.0", 9090), HealthHandler).serve_forever()
+
+    if __name__ == "__main__":
+        # Wait for Kafka broker
+        while True:
+            try:
+                _producer = KafkaProducer(
+                    bootstrap_servers=KAFKA_SERVERS.split(","),
+                    acks="all",
+                    retries=5,
+                    value_serializer=None,
+                    key_serializer=None,
+                )
+                print(f"Kafka producer ready: {KAFKA_SERVERS}", flush=True)
+                break
+            except NoBrokersAvailable:
+                print(f"Waiting for Kafka at {KAFKA_SERVERS}...", flush=True)
+                time.sleep(5)
+
+        threading.Thread(target=run_health, daemon=True).start()
+        print("Health endpoint on :9090", flush=True)
+
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="campus-bridge-py")
+        if MQTT_USERNAME:
+            client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+        client.on_connect    = on_connect
+        client.on_disconnect = on_disconnect
+        client.on_message    = on_message
+        # Retry MQTT connect until mosquitto is ready
+        while True:
+            try:
+                client.connect(MQTT_HOST, MQTT_PORT, 60)
+                print(f"Connecting to MQTT {MQTT_HOST}:{MQTT_PORT}...", flush=True)
+                break
+            except (OSError, Exception) as e:
+                print(f"Waiting for MQTT at {MQTT_HOST}:{MQTT_PORT}: {e}", flush=True)
+                time.sleep(5)
+        client.loop_forever(retry_first_connection=True)
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bridge
+  namespace: campus
+  labels:
+    app: bridge
+    version: v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bridge
+  template:
+    metadata:
+      labels:
+        app: bridge
+    spec:
+      initContainers:
+        - name: pip-install
+          image: python:3.11-slim
+          command:
+            - sh
+            - -c
+            - |
+              pip install --quiet --target /pkgs \
+                "paho-mqtt==2.1.0" \
+                "kafka-python==2.0.2"
+          volumeMounts:
+            - name: pip-pkgs
+              mountPath: /pkgs
+      containers:
+        - name: bridge
+          image: python:3.11-slim
+          command:
+            - sh
+            - -c
+            - |
+              PYTHONPATH=/pkgs python /scripts/bridge.py
+          envFrom:
+            - configMapRef:
+                name: campus-common
+            - secretRef:
+                name: campus-mqtt
+          ports:
+            - containerPort: 9090
+              name: health
+          volumeMounts:
+            - name: bridge-script
+              mountPath: /scripts
+            - name: pip-pkgs
+              mountPath: /pkgs
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 25m
+            limits:
+              memory: 64Mi
+              cpu: 100m
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9090
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9090
+            initialDelaySeconds: 90
+            periodSeconds: 30
+      volumes:
+        - name: bridge-script
+          configMap:
+            name: bridge-script
+        - name: pip-pkgs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bridge
+  namespace: campus
+spec:
+  selector:
+    app: bridge
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: health

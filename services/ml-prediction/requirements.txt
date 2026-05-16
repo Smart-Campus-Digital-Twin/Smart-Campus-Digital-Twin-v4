@@ -1,0 +1,13 @@
+kedro~=0.19.15
+kedro-datasets[pandas,json]~=3.0
+mlflow~=2.13.0
+pandas~=2.2.0
+scikit-learn~=1.4.1.post1
+xgboost~=2.0.3
+influxdb-client~=1.40.0
+psycopg2-binary~=2.9.9
+confluent-kafka~=2.3.0
+pyarrow~=15.0.0
+python-dotenv~=1.0.0
+pyyaml~=6.0.1
+setuptools>=65.0,<72  

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: campus-common
+  namespace: campus
+data:
+  # Kafka
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.campus.svc.cluster.local:9092"
+  KAFKA_TOPIC_TEMPERATURE: "sensors.temperature"
+  KAFKA_TOPIC_OCCUPANCY: "sensors.occupancy"
+  KAFKA_TOPIC_ENERGY: "sensors.energy"
+  KAFKA_TOPIC_DLQ: "sensors.dlq"
+  KAFKA_TOPIC_ANOMALIES: "alerts.anomalies"
+  KAFKA_TOPIC_AGGREGATED: "sensors.aggregated"
+  KAFKA_RETENTION_MS: "604800000"
+  KAFKA_PARTITIONS: "3"
+  # InfluxDB
+  INFLUXDB_URL: "http://influxdb:8086"
+  INFLUXDB_ORG: "smart-campus"
+  INFLUXDB_BUCKET: "campus_sensors"
+  # Postgres
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "campus"
+  # Redis
+  REDIS_URL: "redis://redis:6379"
+  # Keycloak
+  KEYCLOAK_URL: "http://keycloak:8080/auth"
+  KEYCLOAK_REALM: "campus"
+  # MQTT
+  MQTT_HOST: "mosquitto"
+  MQTT_PORT: "1883"
+  # MLflow
+  MLFLOW_TRACKING_URI: "http://mlflow:5000"
+  # Misc
+  TZ: "Asia/Colombo"
+  LOG_LEVEL: "INFO"

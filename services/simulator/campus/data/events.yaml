@@ -1,0 +1,115 @@
+# Campus event definitions.
+# Edit names, venues, probabilities, months, and day ranges freely.
+# The generation logic (seeding, scheduling rules) lives in events.py.
+# Venue IDs must match building IDs in topology.py.
+
+padura:
+  start_hour: 18.0
+  end_hour: 22.0
+  venue: lagaan
+  fill_range: [0.55, 0.90]
+  sem1_doy_range: [135, 191]   # May 15 – Jul 10
+  sem2_doy_range: [324, 364]   # Nov 20 – Dec 30
+  departments:
+    - {name: "Computer Science",        building: "sumanadasa",    padura_venue: "sumanadasa"}
+    - {name: "Information Technology",  building: "faculty-it"}
+    - {name: "Civil Engineering",        building: "dept-civil"}
+    - {name: "Electronics & Telecom",   building: "dept-ete",      padura_venue: "dept-ete"}
+    - {name: "Textile & Clothing",      building: "dept-textile"}
+    - {name: "Transport & Logistics",   building: "dept-transport"}
+    - {name: "Material Science",        building: "dept-material"}
+    - {name: "Chemical Engineering",    building: "dept-chemical",  padura_venue: "dept-chemical"}
+    - {name: "Mechanical Engineering",  building: "dept-mechanical"}
+    - {name: "Business Science",        building: "faculty-business"}
+    - {name: "Medicine Faculty",        building: "faculty-medicine"}
+
+food_festival:
+  months: [3, 9, 11]
+  day_range: [1, 28]
+  probability: 0.65
+  start_hour: 10.0
+  end_hour: 20.0
+  venue_fill:
+    lagaan: [0.45, 0.80]
+    sentra-court: [0.80, 0.98]
+  names:
+    - "Cultural Food Festival"
+    - "Campus Street Food Carnival"
+
+
+symposium:
+  start_hour: 8.0
+  end_hour: 17.0
+  venue: multipurpose-hall
+  fill_range: [0.65, 0.95]
+  day_range: [5, 25]
+  faculties:
+    - {name: "Engineering",   sem1_month: 5,  sem2_month: 11}
+    - {name: "IT & Business", sem1_month: 4,  sem2_month: 10}
+
+orientation:
+  months: [2, 8]
+  day_range: [3, 14]
+  name: "New Student Orientation"
+  start_hour: 8.0
+  end_hour: 13.0
+  venue: multipurpose-hall
+  fill_range: [0.75, 0.97]
+
+career_fair:
+  months: [5, 11]
+  day_range: [10, 20]
+  name: "Industry Career Fair"
+  start_hour: 9.0
+  end_hour: 16.0
+  main_venue: multipurpose-hall
+  main_fill_range: [0.70, 0.92]
+  dept_fill_range: [0.45, 0.75]
+  dept_venues:
+    - na-hall
+    - sumanadasa
+    - dept-civil
+    - dept-ete
+    - dept-textile
+    - dept-transport
+    - dept-material
+    - dept-chemical
+    - dept-mechanical
+    - faculty-it
+    - faculty-business
+
+workshop:
+  probability: 0.45
+  am_hours: [9.0, 13.0]
+  pm_hours: [13.0, 17.0]
+  fill_range: [0.55, 0.85]
+  venues:
+    - na-hall
+    - sumanadasa
+    - dept-civil
+    - dept-ete
+    - dept-textile
+    - dept-transport
+    - dept-material
+    - dept-chemical
+    - dept-mechanical
+    - faculty-it
+    - faculty-business
+  names:
+    - "Research Methods Workshop"
+    - "Industry 4.0 Workshop"
+    - "Python & Data Science Workshop"
+    - "IoT Applications Workshop"
+    - "Leadership & Soft Skills Workshop"
+    - "Entrepreneurship Workshop"
+
+movie_night:
+  day_range: [3, 25]
+  probability: 0.55
+  start_hour: 19.0
+  end_hour: 22.0
+  venue: faculty-business
+  fill_range: [0.30, 0.70]
+  names:
+    - "Movie Night"
+

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sim-control-frontend
+  namespace: campus
+  labels:
+    app: sim-control-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sim-control-frontend
+  template:
+    metadata:
+      labels:
+        app: sim-control-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/sim-control-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              name: http
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://sim-control-backend:8000"
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 200m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sim-control-frontend
+  namespace: campus
+spec:
+  selector:
+    app: sim-control-frontend
+  type: ClusterIP
+  ports:
+    - port: 3001
+      targetPort: 3001
+      name: http

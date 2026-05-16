@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: campus
+
+resources:
+  - simulator.yaml
+
+images:
+  - name: campus-simulator
+    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-simulator
+    newTag: v3

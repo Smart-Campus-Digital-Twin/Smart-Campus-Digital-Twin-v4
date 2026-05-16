@@ -1,0 +1,21 @@
+# Grafana datasource provisioning — PostgreSQL (for reports and anomaly audit)
+
+apiVersion: 1
+
+datasources:
+  - name: PostgreSQL
+    type: postgres
+    uid: PCC52D03280B7034C
+    url: postgres:5432
+    user: $__env{POSTGRES_USER}
+    database: $__env{POSTGRES_DB}
+    secureJsonData:
+      password: $__env{POSTGRES_PASSWORD}
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+      timescaledb: false
+    editable: false

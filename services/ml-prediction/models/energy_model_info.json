@@ -1,0 +1,6 @@
+{
+  "run_id": "4b99978752cd439aa3a0b0231be16f47",
+  "model_name": "campus_energy_forecast",
+  "mae": 0.06617636289180237,
+  "rmse": 0.14693335144695643
+}

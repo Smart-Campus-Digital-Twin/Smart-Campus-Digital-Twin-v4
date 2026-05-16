@@ -1,0 +1,154 @@
+name: Build & Push Docker Images
+
+on:
+  push:
+    branches-ignore: [master, main]
+  pull_request:
+    branches: [master, main, v3]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+
+jobs:
+  # ── Detect which services have changed files ────────────────────────────────
+  changes:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      any-changed: ${{ steps.set-matrix.outputs.any-changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            campus-api:
+              - 'services/api/**'
+              - 'shared/**'
+            campus-simulator:
+              - 'services/simulator/**'
+              - 'shared/**'
+            campus-frontend:
+              - 'services/frontend/**'
+            campus-ml-consumer:
+              - 'services/ml-consumer/consumer/**'
+              - 'shared/**'
+            campus-ml-inference:
+              - 'services/ml-prediction/**'
+              - 'shared/**'
+            campus-sim-control-backend:
+              - 'services/sim-control/backend/**'
+              - 'shared/**'
+            campus-sim-control-frontend:
+              - 'services/sim-control/frontend/**'
+
+      - name: Build filtered matrix
+        id: set-matrix
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+          EVENT:   ${{ github.event_name }}
+        run: |
+          ALL='[
+            {"service":"campus-api","dockerfile":"services/api/Dockerfile","context":"."},
+            {"service":"campus-simulator","dockerfile":"services/simulator/Dockerfile","context":"."},
+            {"service":"campus-frontend","dockerfile":"services/frontend/Dockerfile","context":"services/frontend"},
+            {"service":"campus-ml-consumer","dockerfile":"services/ml-consumer/consumer/Dockerfile","context":"."},
+            {"service":"campus-ml-inference","dockerfile":"services/ml-prediction/Dockerfile","context":".","target":"inference"},
+            {"service":"campus-sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"services/sim-control/backend"},
+            {"service":"campus-sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend"}
+          ]'
+
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            FILTERED=$(echo "$ALL" | jq -c '.')
+          else
+            FILTERED=$(echo "$ALL" | jq -c --argjson c "$CHANGES" \
+              '[.[] | select(.service as $s | $c | index($s) != null)]')
+          fi
+
+          ANY=$(echo "$FILTERED" | jq 'length > 0')
+
+          {
+            echo "matrix<<EOF"
+            echo "{\"include\":$FILTERED}"
+            echo "EOF"
+            echo "any-changed=$ANY"
+          } >> "$GITHUB_OUTPUT"
+
+  # ── Build + push only changed images ───────────────────────────────────────
+  build-push:
+    needs: changes
+    if: needs.changes.outputs.any-changed == 'true'
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/v3' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          provenance: false
+
+  # ── Make pushed images public ──────────────────────────────────────────────
+  make-public:
+    needs: [changes, build-push]
+    if: github.event_name != 'pull_request'
+    name: Public ${{ matrix.service }}
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+
+    steps:
+      - name: Make package public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH \
+            "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}%2F${{ matrix.service }}/visibility" \
+            -f visibility=public

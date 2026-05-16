@@ -1,0 +1,127 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: campus-api
+    url: http://api:8000
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: api-rest
+        paths:
+          - "/api"
+        strip_path: true
+      - name: api-ws
+        paths:
+          - "/ws"
+        strip_path: false
+        protocols:
+          - http
+          - https
+
+  - name: keycloak-svc
+    url: http://keycloak:8080
+    routes:
+      - name: keycloak-auth
+        paths:
+          - "/auth"
+        strip_path: false
+      - name: keycloak-resources
+        paths:
+          - "/resources"
+        strip_path: false
+
+  - name: grafana-svc
+    url: http://grafana:3000
+    routes:
+      - name: grafana-ui
+        paths:
+          - "/grafana"
+        strip_path: true
+
+  - name: simulator-svc
+    url: http://simulator:8002
+    routes:
+      - name: simulator-api
+        paths:
+          - "/simulator/api"
+        strip_path: true
+
+  - name: mosquitto-ws
+    url: http://mosquitto:9001
+    routes:
+      - name: mqtt-ws
+        paths:
+          - "/mqtt"
+        strip_path: true
+        protocols:
+          - http
+          - https
+
+  - name: acme-solver
+    url: http://cm-acme-http-solver:8089
+    routes:
+      - name: acme-challenge
+        paths:
+          - "/.well-known/acme-challenge"
+        strip_path: false
+        preserve_host: true
+
+  - name: campus-frontend
+    url: http://frontend:80
+    routes:
+      - name: frontend-root
+        paths:
+          - "/"
+        strip_path: false
+
+plugins:
+  - name: pre-function
+    config:
+      access:
+        - |
+          if kong.request.get_scheme() == "http"
+             and not string.find(kong.request.get_path(), "^/%.well%-known/acme%-challenge/") then
+            return kong.response.exit(301, "",
+              { ["Location"] = "https://campus.129-212-216-214.nip.io" .. kong.request.get_path_with_query() })
+          end
+
+  - name: rate-limiting
+    config:
+      minute: 600
+      policy: local
+
+  - name: cors
+    config:
+      origins:
+        - "https://campus.129-212-216-214.nip.io"
+        - "http://129.212.216.214"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - Accept
+      max_age: 3600
+
+  - name: jwt
+    service: campus-api
+    config:
+      key_claim_name: iss
+      claims_to_verify:
+        - exp
+      run_on_preflight: false
+
+consumers:
+  - username: keycloak
+    jwt_secrets:
+      - key: "__JWT_ISSUER__"
+        algorithm: RS256
+        rsa_public_key: |
+          __JWT_RSA_PUBLIC_KEY__

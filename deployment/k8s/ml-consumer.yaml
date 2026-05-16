@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-consumer
+  namespace: campus
+  labels:
+    app: ml-consumer
+    version: v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-consumer
+  template:
+    metadata:
+      labels:
+        app: ml-consumer
+    spec:
+      initContainers:
+        - name: wait-kafka
+          image: curlimages/curl:8.7.1
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z kafka-0.kafka.campus.svc.cluster.local 9092 2>/dev/null; do
+                echo "Waiting for Kafka..."; sleep 5
+              done
+        - name: wait-influxdb
+          image: curlimages/curl:8.7.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf http://influxdb:8086/ping; do
+                echo "Waiting for InfluxDB..."; sleep 5
+              done
+        - name: wait-postgres
+          image: curlimages/curl:8.7.1
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432 2>/dev/null; do
+                echo "Waiting for Postgres..."; sleep 5
+              done
+      containers:
+        - name: ml-consumer
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-consumer:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9091
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: campus-common
+            - secretRef:
+                name: influxdb-env
+            - secretRef:
+                name: postgres-env
+          env:
+            - name: KAFKA_CONSUMER_GROUP
+              value: campus-ml-consumer-v2
+            - name: ANOMALY_TEMP_MIN
+              value: "5.0"
+            - name: ANOMALY_TEMP_MAX
+              value: "45.0"
+            - name: ANOMALY_TEMP_ZSCORE
+              value: "3.0"
+            - name: ANOMALY_ENERGY_SPIKE
+              value: "3.0"
+            - name: ANOMALY_OCCUPANCY_MAX
+              value: "500"
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 150m
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9091
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9091
+            initialDelaySeconds: 30
+            periodSeconds: 30

@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-prediction
+  namespace: campus
+  labels:
+    app: ml-prediction
+spec:
+  progressDeadlineSeconds: 1800
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-prediction
+  template:
+    metadata:
+      labels:
+        app: ml-prediction
+    spec:
+      initContainers:
+        - name: clone-repo
+          image: alpine/git:2.45.2
+          command:
+            - sh
+            - -c
+            - |
+              git clone --depth 1 --branch main https://github.com/Smart-Campus-Digital-Twin/Smart-Campus-Digital-Twin-v4.git /workspace/repo
+          volumeMounts:
+            - name: repo
+              mountPath: /workspace
+      containers:
+        - name: ml-prediction
+          image: python:3.12-slim-bookworm
+          command:
+            - sh
+            - -c
+            - |
+              python -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
+              pip install --no-cache-dir -r /workspace/repo/ml/prediction_service/requirements.txt && \
+              pip install --no-cache-dir 'setuptools<72' && \
+              exec python /workspace/repo/ml/prediction_service/main.py
+          workingDir: /workspace/repo/ml/prediction_service
+          volumeMounts:
+            - name: repo
+              mountPath: /workspace
+          ports:
+            - containerPort: 8001
+              name: http
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow:5000"
+            - name: INFLUXDB_URL
+              value: "http://influxdb:8086"
+            - name: INFLUXDB_ORG
+              value: "smart-campus"
+            - name: INFLUXDB_BUCKET
+              value: "campus_predictions"
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            failureThreshold: 180
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 0
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 0
+            periodSeconds: 30
+      volumes:
+        - name: repo
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-prediction
+  namespace: campus
+spec:
+  selector:
+    app: ml-prediction
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001

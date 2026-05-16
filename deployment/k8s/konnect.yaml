@@ -1,0 +1,78 @@
+# Kong Konnect decK sync — pushes rendered declarative config to Konnect SaaS control plane.
+# Requires env/konnect.env with DECK_KONNECT_TOKEN and DECK_KONNECT_CONTROL_PLANE_NAME.
+# The job reuses the same render script that the Kong initContainer uses.
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: konnect-sync
+  namespace: campus
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            app: konnect-sync
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+            - name: render-kong-config
+              image: python:3.12-slim-bookworm
+              command:
+                - sh
+                - -c
+                - |
+                  pip install --quiet requests cryptography && \
+                  python /scripts/render_kong_config.py
+              env:
+                - name: KEYCLOAK_INTERNAL_URL
+                  value: "http://keycloak:8080/auth"
+                - name: KEYCLOAK_REALM
+                  value: "campus"
+                - name: JWT_ISSUER
+                  value: "https://campus.165-245-144-106.nip.io/auth/realms/campus"
+                - name: KONG_TEMPLATE_PATH
+                  value: "/template/kong.yml"
+                - name: KONG_OUT_PATH
+                  value: "/kong-config/kong.yml"
+                - name: KEYCLOAK_JWKS_ATTEMPTS
+                  value: "30"
+                - name: KEYCLOAK_JWKS_SLEEP_S
+                  value: "3"
+              volumeMounts:
+                - name: kong-template
+                  mountPath: /template
+                - name: kong-render-scripts
+                  mountPath: /scripts
+                - name: kong-config
+                  mountPath: /kong-config
+          containers:
+            - name: deck-sync
+              image: kong/deck:v1.39.0
+              command:
+                - deck
+                - konnect
+                - sync
+                - --konnect-addr=$(DECK_KONNECT_ADDR)
+                - --konnect-token=$(DECK_KONNECT_TOKEN)
+                - --konnect-control-plane=$(DECK_KONNECT_CONTROL_PLANE_NAME)
+                - --state=/kong-config/kong.yml
+              envFrom:
+                - secretRef:
+                    name: konnect-env
+              volumeMounts:
+                - name: kong-config
+                  mountPath: /kong-config
+          volumes:
+            - name: kong-template
+              configMap:
+                name: kong-template
+            - name: kong-render-scripts
+              configMap:
+                name: kong-render-scripts
+            - name: kong-config
+              emptyDir: {}

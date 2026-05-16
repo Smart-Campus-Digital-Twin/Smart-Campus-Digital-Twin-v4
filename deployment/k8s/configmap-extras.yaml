@@ -1,0 +1,71 @@
+---
+# ─── Mosquitto ConfigMap ───────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: campus
+data:
+  mosquitto.conf: |
+    listener 1883
+    listener 9001
+    protocol websockets
+    allow_anonymous false
+    password_file /mosquitto/data/passwd
+    persistence true
+    persistence_location /mosquitto/data/
+    autosave_interval 1800
+    autosave_on_changes false
+    persistent_client_expiration 1h
+    max_queued_messages 500
+    queue_qos0_messages false
+    log_dest stdout
+    log_type error
+    log_type warning
+    log_type notice
+    log_type information
+---
+# ─── Postgres init SQL ─────────────────────────────────────────────────────
+# Creates: campus tables, keycloak DB, mlflow DB
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-sql
+  namespace: campus
+data:
+  init.sql: |
+    -- Campus main schema tables
+    CREATE TABLE IF NOT EXISTS anomaly_events (
+        id              BIGSERIAL PRIMARY KEY,
+        rule            TEXT NOT NULL,
+        topic           TEXT NOT NULL,
+        room_id         TEXT NOT NULL,
+        sensor_id       TEXT,
+        value           JSONB,
+        severity        TEXT NOT NULL DEFAULT 'warning',
+        detected_at     TIMESTAMPTZ NOT NULL,
+        raw_payload     JSONB,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_anomaly_room_id  ON anomaly_events (room_id);
+    CREATE INDEX IF NOT EXISTS idx_anomaly_detected ON anomaly_events (detected_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_anomaly_severity ON anomaly_events (severity);
+
+    CREATE TABLE IF NOT EXISTS sensor_metadata (
+        sensor_id   TEXT PRIMARY KEY,
+        room_id     TEXT NOT NULL,
+        building    TEXT,
+        sensor_type TEXT NOT NULL,
+        installed   TIMESTAMPTZ DEFAULT NOW()
+    );
+
+  create-dbs.sh: |
+    #!/bin/bash
+    set -e
+    # Create keycloak and mlflow databases if they don't exist
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE keycloak' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloak')\gexec
+        SELECT 'CREATE DATABASE mlflow'   WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mlflow')\gexec
+        GRANT ALL PRIVILEGES ON DATABASE keycloak TO $POSTGRES_USER;
+        GRANT ALL PRIVILEGES ON DATABASE mlflow   TO $POSTGRES_USER;
+    EOSQL

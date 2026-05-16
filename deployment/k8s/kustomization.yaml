@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: campus
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - configmap.yaml
+  - configmap-extras.yaml
+  - postgres.yaml
+  - redis.yaml
+  - kafka.yaml
+  - kafka-init.yaml
+  - bridge.yaml
+  - influxdb.yaml
+  - mosquitto.yaml
+  - keycloak.yaml
+  - mlflow.yaml
+  - ml-consumer.yaml
+  - ml-retrain-daemon.yaml
+  - api.yaml
+  - frontend.yaml
+  - postgres-observer.yaml
+  - grafana.yaml
+  - kong.yaml
+  - prometheus.yaml
+  - node-exporter.yaml
+  - acme-solver-svc.yaml
+  - kong-certificate.yaml
+  - postgres-vacuum-cron.yaml
+  - ml-prediction.yaml
+  - simulator.yaml
+
+images:
+  - name: campus-api
+    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-api
+    newTag: v3
+  - name: campus-frontend
+    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-frontend
+    newTag: v3
+  - name: campus-ml-consumer
+    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-consumer
+    newTag: v3
+
+configMapGenerator:
+  - name: keycloak-realm-config
+    files:
+      - infra/keycloak/realm-campus.json
+  - name: grafana-dashboards-config
+    files:
+      - infra/grafana/provisioning/dashboards/dashboards.yaml
+  - name: grafana-datasources-config
+    files:
+      - infra/grafana/provisioning/datasources/influxdb.yaml
+      - infra/grafana/provisioning/datasources/postgresql.yaml
+      - infra/grafana/provisioning/datasources/prometheus.yaml
+  - name: grafana-dashboards-json
+    files:
+      - infra/grafana/dashboards/campus_overview.json
+  - name: prometheus-config
+    files:
+      - infra/prometheus/prometheus.yml
+  - name: influxdb-init-scripts
+    files:
+      - init-buckets.sh=infra/influxdb/init-buckets.sh
+  - name: kong-template
+    files:
+      - kong.yml=infra/kong/kong.template.yml
+    options:
+      disableNameSuffixHash: true
+  - name: kong-render-scripts
+    files:
+      - render_kong_config.py=infra/kong/render_kong_config.py
+    options:
+      disableNameSuffixHash: true

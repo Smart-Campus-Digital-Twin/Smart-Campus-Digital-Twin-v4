@@ -1,0 +1,73 @@
+# ── Raw datasets produced by ml/generate_datasets.py ─────────────────────────
+
+canteen_raw:
+  type: pandas.CSVDataset
+  filepath: ../datasets/canteen_congestion_2024_2025.csv
+  load_args:
+    parse_dates: [timestamp]
+
+library_raw:
+  type: pandas.CSVDataset
+  filepath: ../datasets/library_congestion_2024_2025.csv
+  load_args:
+    parse_dates: [timestamp]
+
+energy_raw:
+  type: pandas.CSVDataset
+  filepath: ../datasets/energy_forecast_2024_2025.csv
+  load_args:
+    parse_dates: [timestamp]
+
+# ── Processed feature tables ──────────────────────────────────────────────────
+
+canteen_features:
+  type: pandas.ParquetDataset
+  filepath: ../processed/canteen_features.parquet
+
+library_features:
+  type: pandas.ParquetDataset
+  filepath: ../processed/library_features.parquet
+
+energy_features:
+  type: pandas.ParquetDataset
+  filepath: ../processed/energy_features.parquet
+
+# ── Train/test splits ─────────────────────────────────────────────────────────
+
+canteen_train:
+  type: pandas.ParquetDataset
+  filepath: ../processed/canteen_train.parquet
+
+canteen_test:
+  type: pandas.ParquetDataset
+  filepath: ../processed/canteen_test.parquet
+
+library_train:
+  type: pandas.ParquetDataset
+  filepath: ../processed/library_train.parquet
+
+library_test:
+  type: pandas.ParquetDataset
+  filepath: ../processed/library_test.parquet
+
+energy_train:
+  type: pandas.ParquetDataset
+  filepath: ../processed/energy_train.parquet
+
+energy_test:
+  type: pandas.ParquetDataset
+  filepath: ../processed/energy_test.parquet
+
+# ── Trained models (stored as MLflow run IDs in a JSON sidecar) ───────────────
+
+canteen_model_info:
+  type: json.JSONDataset
+  filepath: ../models/canteen_model_info.json
+
+library_model_info:
+  type: json.JSONDataset
+  filepath: ../models/library_model_info.json
+
+energy_model_info:
+  type: json.JSONDataset
+  filepath: ../models/energy_model_info.json
