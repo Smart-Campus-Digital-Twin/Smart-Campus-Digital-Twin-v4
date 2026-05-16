@@ -20,6 +20,19 @@ UNITS: dict[str, str] = {
 
 HISTORY_LEN = 60
 
+# Mean-reverting random walk parameters for the NORMAL mode.
+# A small per-step delta plus reversion toward the configured midpoint keeps
+# adjacent readings close to each other so a fresh subscriber sees a smooth
+# trajectory rather than independent samples drawn from a wide gaussian.
+_NORMAL_STEP_FRACTION = 0.02      # fraction of (max-min) per 5s tick
+_NORMAL_REVERSION = 0.05          # pull toward midpoint per tick
+_NORMAL_NOISE_FRACTION = 0.005    # tiny additive noise
+
+# Anomaly trigger: standard deviation across the last N readings exceeding
+# a fraction of the configured range marks the sensor as anomalous.
+_ANOMALY_WINDOW = 6
+_ANOMALY_STD_FRACTION = 0.18
+
 
 class SensorEngine:
     def __init__(self) -> None:
@@ -27,6 +40,7 @@ class SensorEngine:
         self._last_values: dict[str, float] = {}
         self._last_readings: dict[str, dict[str, Any]] = {}
         self._history: dict[str, deque[tuple[int, float]]] = {}
+        self._anomaly_flags: dict[str, bool] = {}
 
     def generate_reading(self, sensor: Sensor) -> SensorReadingOut | None:
         if not sensor.enabled:
@@ -38,7 +52,7 @@ class SensorEngine:
         now_ms = int(now.timestamp() * 1000)
 
         if mode == BehaviorMode.NORMAL:
-            value = self._normal(cfg)
+            value = self._normal_for(sensor.id, cfg)
         elif mode == BehaviorMode.RANDOM:
             value = self._random(cfg)
         elif mode == BehaviorMode.PATTERN:
@@ -48,6 +62,11 @@ class SensorEngine:
         else:
             value = self._normal(cfg)
 
+        # Clamp to configured range so anomaly spikes still respect the
+        # physical bound for non-anomaly modes.
+        if mode != BehaviorMode.ANOMALY:
+            value = min(max(value, cfg.min_value), cfg.max_value)
+
         if str(sensor.sensor_type) == "occupancy":
             value = max(0, int(round(value)))
         else:
@@ -55,6 +74,12 @@ class SensorEngine:
         self._last_values[sensor.id] = value
         buf = self._history.setdefault(sensor.id, deque(maxlen=HISTORY_LEN))
         buf.append((now_ms, value))
+
+        # High-frequency fluctuation detection: rolling std-dev over the
+        # last _ANOMALY_WINDOW samples beyond a fraction of the configured
+        # range marks the sensor anomalous regardless of behaviour mode.
+        std_anom = self._detect_oscillation(sensor.id, cfg)
+        self._anomaly_flags[sensor.id] = std_anom or mode == BehaviorMode.ANOMALY
 
         reading = SensorReadingOut(
             sensor_id=sensor.id,
@@ -70,6 +95,7 @@ class SensorEngine:
             behavior_mode=str(mode),
             metadata={
                 "sensor_name": sensor.name,
+                "anomaly": self._anomaly_flags[sensor.id],
                 **({"count": int(value)} if str(sensor.sensor_type) == "occupancy" else {}),
             },
         )
@@ -92,9 +118,30 @@ class SensorEngine:
         }
 
     def _normal(self, cfg: Any) -> float:
+        return (cfg.min_value + cfg.max_value) / 2
+
+    def _normal_for(self, sensor_id: str, cfg: Any) -> float:
+        rng = cfg.max_value - cfg.min_value
         mid = (cfg.min_value + cfg.max_value) / 2
-        spread = (cfg.max_value - cfg.min_value) * 0.1
-        return mid + random.gauss(0, spread)
+        prev = self._last_values.get(sensor_id, mid)
+        step = random.uniform(-_NORMAL_STEP_FRACTION, _NORMAL_STEP_FRACTION) * rng
+        reverted = prev + step + (mid - prev) * _NORMAL_REVERSION
+        noise = random.gauss(0, rng * _NORMAL_NOISE_FRACTION)
+        return reverted + noise
+
+    def _detect_oscillation(self, sensor_id: str, cfg: Any) -> bool:
+        buf = self._history.get(sensor_id)
+        if buf is None or len(buf) < _ANOMALY_WINDOW:
+            return False
+        recent = [v for _, v in list(buf)[-_ANOMALY_WINDOW:]]
+        mean = sum(recent) / len(recent)
+        var = sum((v - mean) ** 2 for v in recent) / len(recent)
+        std = var ** 0.5
+        rng = cfg.max_value - cfg.min_value
+        return rng > 0 and std > rng * _ANOMALY_STD_FRACTION
+
+    def get_anomaly(self, sensor_id: str) -> bool:
+        return bool(self._anomaly_flags.get(sensor_id, False))
 
     def _random(self, cfg: Any) -> float:
         return random.uniform(cfg.min_value, cfg.max_value)

@@ -33,6 +33,16 @@ ENERGY_MIN = float(os.getenv("ANOMALY_ENERGY_MIN", "0.0"))             # kWh
 OCCUPANCY_MAX = int(os.getenv("ANOMALY_OCCUPANCY_MAX", "500"))  # persons
 ROLLING_WINDOW = int(os.getenv("ANOMALY_ROLLING_WINDOW", "60"))  # messages
 
+# High-frequency fluctuation thresholds — stdev across the last
+# OSCILLATION_WINDOW samples exceeding fraction_of_range × range marks the
+# stream as oscillating. Per-sensor-type fraction handles different scales.
+OSCILLATION_WINDOW = int(os.getenv("ANOMALY_OSC_WINDOW", "6"))
+OSCILLATION_FRACTION = {
+    "temperature": float(os.getenv("ANOMALY_OSC_TEMP", "2.5")),     # absolute °C stdev
+    "occupancy":   float(os.getenv("ANOMALY_OSC_OCC", "0.15")),     # fraction of OCCUPANCY_MAX
+    "energy":      float(os.getenv("ANOMALY_OSC_ENERGY", "60.0")),  # absolute kWh stdev
+}
+
 
 class RollingStats:
     """Lightweight rolling window for mean/stdev calculations."""
@@ -97,6 +107,8 @@ class AnomalyDetector:
         # room_id → RollingStats per measurement type
         self._temp_stats: dict[str, RollingStats] = {}
         self._energy_stats: dict[str, RollingStats] = {}
+        # sensor_id → tight rolling window per sensor for oscillation detection
+        self._osc_windows: dict[str, deque[float]] = {}
 
     def _get_temp_stats(self, room_id: str) -> RollingStats:
         if room_id not in self._temp_stats:
@@ -120,7 +132,37 @@ class AnomalyDetector:
         elif topic_name == "energy":
             anomalies.extend(self._check_energy(topic, payload))
 
+        anomalies.extend(self._check_oscillation(topic, payload, topic_name))
         return anomalies
+
+    def _check_oscillation(self, topic: str, payload: dict, sensor_type: str) -> list[dict]:
+        val = payload.get("value")
+        sensor_id = str(payload.get("sensor_id", ""))
+        if val is None or not sensor_id:
+            return []
+        threshold = OSCILLATION_FRACTION.get(sensor_type)
+        if threshold is None:
+            return []
+        window = self._osc_windows.setdefault(sensor_id, deque(maxlen=OSCILLATION_WINDOW))
+        try:
+            window.append(float(val))
+        except (TypeError, ValueError):
+            return []
+        if len(window) < OSCILLATION_WINDOW:
+            return []
+        try:
+            std = statistics.stdev(window)
+        except statistics.StatisticsError:
+            return []
+        if std <= threshold:
+            return []
+        return [_anomaly_event(
+            rule="high_frequency_fluctuation",
+            topic=topic,
+            payload=payload,
+            value={"stdev": round(std, 3), "threshold": threshold, "samples": list(window)},
+            severity="warning",
+        )]
 
     def _check_temperature(self, topic: str, payload: dict) -> list[dict]:
         anomalies = []

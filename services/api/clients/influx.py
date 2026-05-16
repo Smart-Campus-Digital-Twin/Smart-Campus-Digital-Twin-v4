@@ -172,6 +172,23 @@ from(bucket: "{config.influxdb_bucket_raw}")
 """
         return await self._query(flux)
 
+    async def sensors_last_seen(self, range_minutes: int = 15) -> pd.DataFrame:
+        """
+        Last reading timestamp per sensor across all buildings.
+
+        Columns: sensor_id, building_id, room_id, sensor_type, _time, _value
+        """
+        flux = f"""
+from(bucket: "{config.influxdb_bucket_raw}")
+  |> range(start: -{range_minutes}m)
+  |> filter(fn: (r) => r._measurement =~ /^sensor_[a-z]/)
+  |> filter(fn: (r) => r._field == "value")
+  |> group(columns: ["sensor_id"])
+  |> last()
+  |> keep(columns: ["_time", "_value", "sensor_id", "building_id", "room_id", "sensor_type"])
+"""
+        return await self._query(flux)
+
     async def all_buildings_anomaly_counts(self, range_minutes: int = 5) -> pd.DataFrame:
         """
         Count of anomaly events per building in the last N minutes.

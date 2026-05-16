@@ -41,10 +41,7 @@ class InfluxWriter:
             self._write_api = self._client.write_api()
             logger.info("Connected to InfluxDB", extra={"url": INFLUXDB_URL})
 
-    async def write(self, topic: str, payload: dict) -> None:
-        """Write a sensor reading to InfluxDB."""
-        await self._ensure_connected()
-
+    def _build_point(self, topic: str, payload: dict) -> Point | None:
         sensor_type = str(payload.get("sensor_type") or topic.split(".")[-1])
         measurement = f"sensor_{sensor_type}"
         room_id = str(payload.get("room_id", "unknown"))
@@ -111,6 +108,13 @@ class InfluxWriter:
             except (ValueError, TypeError):
                 pass  # Use server time
 
+        return point
+
+    async def write(self, topic: str, payload: dict) -> None:
+        await self._ensure_connected()
+        point = self._build_point(topic, payload)
+        if point is None:
+            return
         try:
             await self._write_api.write(
                 bucket=INFLUXDB_BUCKET,
@@ -119,11 +123,26 @@ class InfluxWriter:
                 precision=WritePrecision.NS,
             )
         except Exception as exc:
-            logger.error(
-                "InfluxDB write failed",
-                extra={"measurement": measurement, "sensor_type": sensor_type, "room_id": room_id, "error": str(exc)},
-                exc_info=True,
+            logger.error("InfluxDB write failed", extra={"error": str(exc)}, exc_info=True)
+            raise
+
+    async def write_batch(self, items: list[tuple[str, dict]]) -> None:
+        """Write many readings in one HTTP request."""
+        if not items:
+            return
+        await self._ensure_connected()
+        points = [p for p in (self._build_point(t, pl) for t, pl in items) if p is not None]
+        if not points:
+            return
+        try:
+            await self._write_api.write(
+                bucket=INFLUXDB_BUCKET,
+                org=INFLUXDB_ORG,
+                record=points,
+                precision=WritePrecision.NS,
             )
+        except Exception as exc:
+            logger.error("InfluxDB batch write failed", extra={"count": len(points), "error": str(exc)}, exc_info=True)
             raise
 
     async def close(self) -> None:

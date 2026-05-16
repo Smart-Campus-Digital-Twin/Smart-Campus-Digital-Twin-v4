@@ -42,6 +42,8 @@ TOPICS = [
     os.getenv("KAFKA_TOPIC_ENERGY", "sensors.energy"),
 ]
 GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "campus-ml-consumer")
+BATCH_MAX_SIZE = int(os.getenv("INFLUX_BATCH_SIZE", "200"))
+BATCH_MAX_INTERVAL_S = float(os.getenv("INFLUX_BATCH_INTERVAL_S", "1.0"))
 
 
 async def process_message(
@@ -111,12 +113,29 @@ async def consume_loop(
             logger.warning(f"Kafka not ready, retrying in 5s: {exc}")
             await asyncio.sleep(5)
 
+    batch: list[tuple[str, dict]] = []
+    last_flush = asyncio.get_event_loop().time()
+
+    async def flush() -> None:
+        nonlocal batch, last_flush
+        if not batch:
+            return
+        try:
+            await influx.write_batch(batch)
+            for topic_, _ in batch:
+                metrics.record_processed(topic_)
+        except Exception as exc:  # noqa: BLE001
+            for topic_, _ in batch:
+                metrics.record_error(topic_)
+            logger.error("Batch write failed", extra={"size": len(batch), "error": str(exc)})
+        batch = []
+        last_flush = asyncio.get_event_loop().time()
+
     try:
         logger.info("Starting message consumption loop")
         async for msg in consumer:
             if stop_event.is_set():
                 break
-            logger.info(f"Received message from {msg.topic}, partition {msg.partition}, offset {msg.offset}")
             try:
                 payload = json.loads(msg.value.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError) as exc:
@@ -124,9 +143,23 @@ async def consume_loop(
                 logger.warning(f"Bad message on {msg.topic}: {exc}")
                 continue
 
-            await process_message(
-                msg.topic, payload, influx, pg, detector, metrics
-            )
+            batch.append((msg.topic, payload))
+
+            # Anomaly checks stay per-message; they are cheap and write to
+            # postgres asynchronously without contributing to the influx
+            # roundtrip overhead that caused consumer lag.
+            anomalies = detector.check(msg.topic, payload)
+            for anomaly in anomalies:
+                try:
+                    await pg.write_anomaly(anomaly)
+                    metrics.record_anomaly(msg.topic)
+                except Exception as exc:  # noqa: BLE001
+                    logger.error("Anomaly persistence failed", extra={"error": str(exc)})
+
+            now = asyncio.get_event_loop().time()
+            if len(batch) >= BATCH_MAX_SIZE or (now - last_flush) >= BATCH_MAX_INTERVAL_S:
+                await flush()
+        await flush()
     finally:
         await consumer.stop()
         logger.info("Kafka consumer stopped.")

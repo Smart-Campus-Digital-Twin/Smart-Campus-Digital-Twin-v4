@@ -65,11 +65,12 @@ class ZoneData(BaseModel):
     totalCapacity: int
     currentOccupancy: int
     energyKw: float
-    occupancy: int       # occupancy percentage (0-100%)
-    temperatureC: float  # mean across rooms
+    occupancy: int            # capped 0-100 — UI gauge value
+    occupancyTheoretical: int # raw (currentOccupancy/totalCapacity)*100, may exceed 100
+    temperatureC: float
     anomalyCount: int
-    status: str          # "normal" | "busy" | "critical"
-    hasData: bool        # False when no sensor readings in the last window
+    status: str               # "normal" | "busy" | "critical"
+    hasData: bool
 
 
 class RoomData(BaseModel):
@@ -214,12 +215,14 @@ async def campus_zones(
 
         avg_temp  = round(sum(temps) / len(temps), 1) if temps else _DEFAULT["temperature"]
         total_occ_count = sum(occs) if occs else 0
-        total_capacity = capacity_map.get(bld_id, 1)  # avoid division by zero
-        # Calculate occupancy as percentage
-        occupancy_pct = int(round((total_occ_count / total_capacity) * 100)) if total_capacity > 0 else 0
+        total_capacity = capacity_map.get(bld_id, 1)
+        theoretical_pct = int(round((total_occ_count / total_capacity) * 100)) if total_capacity > 0 else 0
+        # Cap the displayed percentage at 100 so a runaway sensor or anomaly
+        # spike does not produce 300% in the UI; the raw value is kept under
+        # occupancyTheoretical for diagnostics.
+        occupancy_pct = min(100, max(0, theoretical_pct))
 
         total_nrg = sum(nrgs) if nrgs else _DEFAULT["energy"]
-        # convert W → kW if simulator emits watts (>500 is clearly watts)
         energy_kw = round(total_nrg / 1000.0 if total_nrg > 500 else total_nrg, 1)
         anom_cnt  = anomaly_counts.get(bld_id, 0)
 
@@ -231,6 +234,7 @@ async def campus_zones(
             currentOccupancy=max(0, int(round(total_occ_count))),
             temperatureC=avg_temp,
             occupancy=occupancy_pct,
+            occupancyTheoretical=theoretical_pct,
             energyKw=energy_kw,
             anomalyCount=anom_cnt,
             status=_derive_status(occupancy_pct, avg_temp, anom_cnt),
@@ -246,6 +250,122 @@ async def campus_zones(
 # ---------------------------------------------------------------------------
 # /campus/buildings/{building_id}/rooms
 # ---------------------------------------------------------------------------
+
+class SensorHealth(BaseModel):
+    sensor_id: str
+    room_id: str
+    building_id: str
+    sensor_type: str
+    last_seen_ms: int | None
+    last_value: float | None
+    seconds_since: int | None
+    broken: bool       # no data within stale threshold
+    anomalous: bool    # >=1 anomaly event in last 5 min
+
+
+class AnomalyEntry(BaseModel):
+    detected_at: str
+    rule: str
+    severity: str
+    sensor_id: str
+    room_id: str
+    value: dict | float | int | str
+
+
+_STALE_AFTER_S = 60   # sensor considered broken if no reading in 60s
+
+
+@router.get(
+    "/sensors/health",
+    response_model=list[SensorHealth],
+    summary="Per-sensor liveness + anomaly status — no auth required",
+)
+async def sensors_health(
+    influx: InfluxAPIClient = Depends(get_influx),
+    postgres: PostgresClient = Depends(get_postgres),
+) -> list[SensorHealth]:
+    try:
+        df = await influx.sensors_last_seen(range_minutes=15)
+    except Exception:
+        df = None
+
+    # Anomaly counts per sensor in the last 5 minutes from postgres.
+    anomalies_by_sensor: dict[str, int] = defaultdict(int)
+    try:
+        rows = await postgres.fetch(
+            "SELECT sensor_id, COUNT(*) AS c FROM anomaly_events "
+            "WHERE detected_at > NOW() - INTERVAL '5 minutes' GROUP BY sensor_id"
+        )
+        for row in rows:
+            anomalies_by_sensor[row["sensor_id"]] = int(row["c"])
+    except Exception:
+        pass
+
+    import time
+    now_ms = int(time.time() * 1000)
+    out: list[SensorHealth] = []
+    if df is not None and not df.empty:
+        for _, row in df.iterrows():
+            sid = str(row.get("sensor_id", ""))
+            if not sid:
+                continue
+            ts = row.get("_time")
+            try:
+                last_ms = int(ts.timestamp() * 1000) if ts is not None else None
+            except Exception:
+                last_ms = None
+            seconds_since = int((now_ms - last_ms) / 1000) if last_ms else None
+            broken = seconds_since is None or seconds_since > _STALE_AFTER_S
+            out.append(SensorHealth(
+                sensor_id=sid,
+                room_id=str(row.get("room_id", "")),
+                building_id=str(row.get("building_id", "")),
+                sensor_type=str(row.get("sensor_type", "")),
+                last_seen_ms=last_ms,
+                last_value=float(row["_value"]) if row.get("_value") is not None else None,
+                seconds_since=seconds_since,
+                broken=broken,
+                anomalous=anomalies_by_sensor.get(sid, 0) > 0,
+            ))
+    return out
+
+
+@router.get(
+    "/anomalies/recent",
+    response_model=list[AnomalyEntry],
+    summary="Most recent anomaly events — no auth required",
+)
+async def anomalies_recent(
+    limit: int = 50,
+    postgres: PostgresClient = Depends(get_postgres),
+) -> list[AnomalyEntry]:
+    limit = max(1, min(500, int(limit)))
+    try:
+        rows = await postgres.fetch(
+            "SELECT detected_at, rule, severity, sensor_id, room_id, value "
+            "FROM anomaly_events ORDER BY detected_at DESC LIMIT $1",
+            limit,
+        )
+    except Exception:
+        return []
+    import json as _json
+    out: list[AnomalyEntry] = []
+    for r in rows:
+        raw_val = r["value"]
+        try:
+            parsed = _json.loads(raw_val) if isinstance(raw_val, str) else raw_val
+        except Exception:
+            parsed = str(raw_val)
+        out.append(AnomalyEntry(
+            detected_at=str(r["detected_at"]),
+            rule=str(r["rule"]),
+            severity=str(r["severity"]),
+            sensor_id=str(r["sensor_id"] or ""),
+            room_id=str(r["room_id"] or ""),
+            value=parsed,
+        ))
+    return out
+
 
 @router.get(
     "/buildings/{building_id}/rooms",
