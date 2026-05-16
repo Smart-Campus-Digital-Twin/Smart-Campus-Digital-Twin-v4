@@ -9,10 +9,27 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
 
 jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      image_prefix: ${{ steps.lc.outputs.image_prefix }}
+      owner_lc: ${{ steps.lc.outputs.owner_lc }}
+      repo_lc: ${{ steps.lc.outputs.repo_lc }}
+      ingress_host: ${{ steps.lc.outputs.ingress_host }}
+    steps:
+      - id: lc
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LC=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          echo "owner_lc=$OWNER_LC" >> "$GITHUB_OUTPUT"
+          echo "repo_lc=$REPO_LC" >> "$GITHUB_OUTPUT"
+          echo "image_prefix=ghcr.io/$OWNER_LC/$REPO_LC" >> "$GITHUB_OUTPUT"
+          echo "ingress_host=sim-control.168-144-48-147.nip.io" >> "$GITHUB_OUTPUT"
+
   build-backend:
+    needs: prep
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,9 +45,10 @@ jobs:
         with:
           context: services/sim-control/backend
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/sim-control-backend:latest
+          tags: ${{ needs.prep.outputs.image_prefix }}/sim-control-backend:latest
 
   build-frontend:
+    needs: prep
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,10 +64,12 @@ jobs:
         with:
           context: services/sim-control/frontend
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/sim-control-frontend:latest
+          tags: ${{ needs.prep.outputs.image_prefix }}/sim-control-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ needs.prep.outputs.ingress_host }}
 
   make-public:
-    needs: [build-backend, build-frontend]
+    needs: [prep, build-backend, build-frontend]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -60,8 +80,17 @@ jobs:
     steps:
       - name: Make package public
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
+          OWNER: ${{ needs.prep.outputs.owner_lc }}
+          REPO: ${{ needs.prep.outputs.repo_lc }}
+          PKG: ${{ matrix.package }}
         run: |
+          set +e
           gh api --method PATCH \
-            "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}%2F${{ matrix.package }}/visibility" \
-            -f visibility=public
+            "/orgs/${OWNER}/packages/container/${REPO}%2F${PKG}/visibility" \
+            -f visibility=public && exit 0
+          gh api --method PATCH \
+            "/users/${OWNER}/packages/container/${REPO}%2F${PKG}/visibility" \
+            -f visibility=public && exit 0
+          echo "::warning::Could not flip visibility for ${OWNER}/${REPO}/${PKG}; set manually in GHCR UI."
+          exit 0

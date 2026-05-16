@@ -64,7 +64,7 @@ jobs:
             {"service":"ml-prediction","dockerfile":"services/ml-prediction/Dockerfile","context":"."},
             {"service":"ml-retrain","dockerfile":"services/ml-retrain/Dockerfile","context":"."},
             {"service":"sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"services/sim-control/backend"},
-            {"service":"sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend"}
+            {"service":"sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend","build_args":"NEXT_PUBLIC_API_URL=https://sim-control.168-144-48-147.nip.io"}
           ]'
 
           REF="${{ github.ref }}"
@@ -138,6 +138,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: ${{ matrix.build_args }}
           provenance: false
 
   # ── Make pushed images public ──────────────────────────────────────────────
