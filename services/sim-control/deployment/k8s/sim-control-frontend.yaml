@@ -24,7 +24,7 @@ spec:
               name: http
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "http://sim-control-backend:8000"
+              value: ""
           resources:
             requests:
               memory: 64Mi

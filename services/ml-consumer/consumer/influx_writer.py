@@ -100,7 +100,7 @@ class InfluxWriter:
         if ts:
             try:
                 if isinstance(ts, (int, float)):
-                    point = point.time(int(ts), WritePrecision.MILLISECONDS)
+                    point = point.time(int(ts), WritePrecision.MS)
                 else:
                     dt = datetime.fromisoformat(str(ts))
                     point = point.time(dt, WritePrecision.SECONDS)

@@ -4,3 +4,4 @@ namespace: campus
 resources:
   - sim-control-backend.yaml
   - sim-control-frontend.yaml
+  - sim-control-ingress.yaml
