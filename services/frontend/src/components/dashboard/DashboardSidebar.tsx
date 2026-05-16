@@ -6,6 +6,8 @@ import { BUILDING_DATA } from "../indoor/FloorData";
 import { usePrefersReducedMotion } from "@/app/hooks/usePrefersReducedMotion";
 import { useAnimatedValue } from "@/app/hooks/useAnimatedValue";
 import MLPredictionPanel from "./MLPredictionPanel";
+import SensorHealthPanel from "./SensorHealthPanel";
+import AnomalyPanel from "./AnomalyPanel";
 
 interface DashboardSidebarProps {
   zones: Zone[];
@@ -334,7 +336,13 @@ export default function DashboardSidebar({
               selectedZone.hasData ? STATUS_COLORS[selectedZone.status] : "#888",
             ],
             ["Avg. Energy",    selectedZone.hasData ? `${animatedEnergy.toFixed(1)} kW` : "—",    "#97FEED"],
-            ["Avg. Occupancy", selectedZone.hasData ? `${animatedOccupancy}%` : "—",              "#97FEED"],
+            [
+              "Occupancy",
+              selectedZone.hasData
+                ? `${selectedZone.currentOccupancy ?? 0} / ${selectedZone.totalCapacity ?? 0} (${animatedOccupancy}% capped, ${selectedZone.occupancyTheoretical ?? animatedOccupancy}% raw)`
+                : "—",
+              "#97FEED",
+            ],
             ["Avg. Temp",      selectedZone.hasData ? `${animatedTemp.toFixed(1)}°C` : "—",       "#97FEED"],
           ].map(([label, value, color], i) => (
             <div
@@ -405,8 +413,8 @@ export default function DashboardSidebar({
           </button>
         )}
         
-        <MLPredictionPanel 
-          selectedZoneId={selectedId} 
+        <MLPredictionPanel
+          selectedZoneId={selectedId}
           selectedZoneName={selectedZone.name}
           occupancy={selectedZone.occupancy}
           buildingId={selectedZone.buildingId}
@@ -414,6 +422,8 @@ export default function DashboardSidebar({
           currentOccupancy={selectedZone.currentOccupancy}
         />
       </div>
+      <SensorHealthPanel buildingId={selectedZone.buildingId} />
+      <AnomalyPanel />
     </nav>
   );
 }

@@ -8,9 +8,32 @@ export type Zone = {
   currentOccupancy?: number;
   energyKw: number;
   occupancy: number;
+  occupancyTheoretical?: number;
   temperatureC: number;
+  anomalyCount?: number;
   status: ZoneStatus;
   hasData: boolean;
+};
+
+export type SensorHealth = {
+  sensor_id: string;
+  room_id: string;
+  building_id: string;
+  sensor_type: string;
+  last_seen_ms: number | null;
+  last_value: number | null;
+  seconds_since: number | null;
+  broken: boolean;
+  anomalous: boolean;
+};
+
+export type AnomalyEntry = {
+  detected_at: string;
+  rule: string;
+  severity: string;
+  sensor_id: string;
+  room_id: string;
+  value: unknown;
 };
 
 export type ZoneLayout = {
