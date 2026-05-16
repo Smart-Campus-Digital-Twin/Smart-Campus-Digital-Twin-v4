@@ -61,6 +61,7 @@ configMapGenerator:
   - name: grafana-dashboards-json
     files:
       - infra/grafana/dashboards/campus_overview.json
+      - infra/grafana/dashboards/node_system_overview.json
   - name: prometheus-config
     files:
       - infra/prometheus/prometheus.yml
