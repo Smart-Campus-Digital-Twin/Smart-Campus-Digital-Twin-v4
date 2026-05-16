@@ -54,6 +54,7 @@ class InfluxWriter:
         # Build Point based on measurement type
         point = (
             Point(measurement)
+            .tag("sensor_type", sensor_type)
             .tag("room_id", room_id)
             .tag("sensor_id", sensor_id)
             .tag("building_id", building_id)
