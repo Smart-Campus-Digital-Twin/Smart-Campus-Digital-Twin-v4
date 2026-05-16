@@ -95,15 +95,17 @@ class InfluxWriter:
         if quality is not None:
             point = point.field("quality", float(quality))
 
-        # Timestamp from payload or now
+        # Timestamp from payload or now. Convert to nanoseconds so the write
+        # call's precision matches the Point's stored time and InfluxDB does
+        # not mis-interpret a millisecond value as nanoseconds (epoch 1970).
         ts = payload.get("timestamp_ms") or payload.get("timestamp") or payload.get("ts")
         if ts:
             try:
                 if isinstance(ts, (int, float)):
-                    point = point.time(int(ts), WritePrecision.MS)
+                    point = point.time(int(ts) * 1_000_000, WritePrecision.NS)
                 else:
                     dt = datetime.fromisoformat(str(ts))
-                    point = point.time(dt, WritePrecision.SECONDS)
+                    point = point.time(dt, WritePrecision.NS)
             except (ValueError, TypeError):
                 pass  # Use server time
 
