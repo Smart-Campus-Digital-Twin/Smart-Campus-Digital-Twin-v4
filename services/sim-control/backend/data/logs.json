@@ -223,5 +223,32 @@
     "action": "toggled",
     "details": "enabled=True",
     "value": null
+  },
+  {
+    "id": "245113ce-4cd9-48a0-a6da-c17763a060e7",
+    "timestamp": "2026-05-16T19:19:08.656600+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "03979a41-2af5-453b-881f-c5925c90ae50",
+    "timestamp": "2026-05-16T19:19:40.235012+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "61e447d1-0735-4c27-b072-89d4ddf9d3ef",
+    "timestamp": "2026-05-16T19:20:23.831051+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
   }
 ]
