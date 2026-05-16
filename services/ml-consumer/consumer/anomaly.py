@@ -39,7 +39,7 @@ ROLLING_WINDOW = int(os.getenv("ANOMALY_ROLLING_WINDOW", "60"))  # messages
 OSCILLATION_WINDOW = int(os.getenv("ANOMALY_OSC_WINDOW", "6"))
 OSCILLATION_FRACTION = {
     "temperature": float(os.getenv("ANOMALY_OSC_TEMP", "2.5")),     # absolute °C stdev
-    "occupancy":   float(os.getenv("ANOMALY_OSC_OCC", "0.15")),     # fraction of OCCUPANCY_MAX
+    "occupancy":   float(os.getenv("ANOMALY_OSC_OCC", "15.0")),     # absolute persons stdev
     "energy":      float(os.getenv("ANOMALY_OSC_ENERGY", "60.0")),  # absolute kWh stdev
 }
 
