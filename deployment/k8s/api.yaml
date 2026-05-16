@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-api:latest
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/api:latest
           imagePullPolicy: Always
           args: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
           ports:

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ml-retrain-daemon
-          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-retrain:latest
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/ml-retrain:latest
           imagePullPolicy: Always
           env:
             - name: MLFLOW_TRACKING_URI

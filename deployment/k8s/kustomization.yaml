@@ -33,15 +33,18 @@ resources:
   - simulator.yaml
 
 images:
-  - name: campus-api
-    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-api
-    newTag: v4
-  - name: campus-frontend
-    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-frontend
-    newTag: v4
-  - name: campus-ml-consumer
-    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-consumer
-    newTag: v4
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/api
+    newTag: latest
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/frontend
+    newTag: latest
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/ml-consumer
+    newTag: latest
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/ml-prediction
+    newTag: latest
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/ml-retrain
+    newTag: latest
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/simulator
+    newTag: latest
 
 configMapGenerator:
   - name: keycloak-realm-config

@@ -7,6 +7,5 @@ resources:
   - simulator.yaml
 
 images:
-  - name: campus-simulator
-    newName: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-simulator
-    newTag: v4
+  - name: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/simulator
+    newTag: latest

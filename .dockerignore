@@ -13,8 +13,9 @@ tests/
 conftest.py
 **/.pytest_cache/
 
-# ML training datasets — large binaries never needed inside any image
-services/ml-prediction/datasets/
+# ML training artifacts — large binaries never needed inside any image.
+# datasets/ is required by services/ml-retrain (CSV fallback), so we
+# only exclude processed/ and models/.
 services/ml-prediction/processed/
 services/ml-prediction/models/
 services/**/__pycache__/

@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: ml-prediction
-          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/campus-ml-prediction:latest
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/ml-prediction:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8001

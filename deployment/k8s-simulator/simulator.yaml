@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: simulator
-          image: campus-simulator:latest
+          image: ghcr.io/smart-campus-digital-twin/smart-campus-digital-twin-v4/simulator:latest
           imagePullPolicy: Always
           envFrom:
             - configMapRef:

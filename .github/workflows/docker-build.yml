@@ -26,28 +26,28 @@ jobs:
         id: filter
         with:
           filters: |
-            campus-api:
+            api:
               - 'services/api/**'
               - 'shared/**'
-            campus-simulator:
+            simulator:
               - 'services/simulator/**'
               - 'shared/**'
-            campus-frontend:
+            frontend:
               - 'services/frontend/**'
-            campus-ml-consumer:
+            ml-consumer:
               - 'services/ml-consumer/consumer/**'
               - 'shared/**'
-            campus-ml-prediction:
+            ml-prediction:
               - 'services/ml-prediction/**'
               - 'shared/**'
-            campus-ml-retrain:
+            ml-retrain:
               - 'services/ml-retrain/**'
               - 'services/ml-prediction/datasets/**'
               - 'shared/**'
-            campus-sim-control-backend:
+            sim-control-backend:
               - 'services/sim-control/backend/**'
               - 'shared/**'
-            campus-sim-control-frontend:
+            sim-control-frontend:
               - 'services/sim-control/frontend/**'
 
       - name: Build filtered matrix
@@ -57,14 +57,14 @@ jobs:
           EVENT:   ${{ github.event_name }}
         run: |
           ALL='[
-            {"service":"campus-api","dockerfile":"services/api/Dockerfile","context":"."},
-            {"service":"campus-simulator","dockerfile":"services/simulator/Dockerfile","context":"."},
-            {"service":"campus-frontend","dockerfile":"services/frontend/Dockerfile","context":"services/frontend"},
-            {"service":"campus-ml-consumer","dockerfile":"services/ml-consumer/consumer/Dockerfile","context":"."},
-            {"service":"campus-ml-prediction","dockerfile":"services/ml-prediction/Dockerfile","context":"."},
-            {"service":"campus-ml-retrain","dockerfile":"services/ml-retrain/Dockerfile","context":"."},
-            {"service":"campus-sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"services/sim-control/backend"},
-            {"service":"campus-sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend"}
+            {"service":"api","dockerfile":"services/api/Dockerfile","context":"."},
+            {"service":"simulator","dockerfile":"services/simulator/Dockerfile","context":"."},
+            {"service":"frontend","dockerfile":"services/frontend/Dockerfile","context":"services/frontend"},
+            {"service":"ml-consumer","dockerfile":"services/ml-consumer/consumer/Dockerfile","context":"."},
+            {"service":"ml-prediction","dockerfile":"services/ml-prediction/Dockerfile","context":"."},
+            {"service":"ml-retrain","dockerfile":"services/ml-retrain/Dockerfile","context":"."},
+            {"service":"sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"services/sim-control/backend"},
+            {"service":"sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend"}
           ]'
 
           REF="${{ github.ref }}"
