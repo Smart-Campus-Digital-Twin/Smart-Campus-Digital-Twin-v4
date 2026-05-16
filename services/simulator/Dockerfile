@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
-COPY simulator/requirements.txt /tmp/requirements.txt
+COPY services/simulator/requirements.txt /tmp/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel \
     && pip install -r /tmp/requirements.txt
@@ -26,7 +26,7 @@ COPY --from=builder --chown=appuser:appgroup /venv /venv
 
 WORKDIR /app
 COPY --chown=appuser:appgroup shared/ ./shared/
-COPY --chown=appuser:appgroup simulator/ ./simulator/
+COPY --chown=appuser:appgroup services/simulator/ ./simulator/
 
 ENV PATH="/venv/bin:$PATH" \
     PYTHONPATH=/app \

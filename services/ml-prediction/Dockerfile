@@ -28,7 +28,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
-COPY ml/requirements.txt /tmp/ml-requirements.txt
+COPY services/ml-prediction/requirements.txt /tmp/ml-requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel \
     && pip install -r /tmp/ml-requirements.txt \
@@ -44,8 +44,8 @@ FROM base AS training
 
 COPY --from=builder --chown=appuser:appgroup /venv /venv
 
-COPY --chown=appuser:appgroup ml/       ./ml/
-COPY --chown=appuser:appgroup shared/   ./shared/
+COPY --chown=appuser:appgroup services/ml-prediction/ ./ml/
+COPY --chown=appuser:appgroup shared/              ./shared/
 
 ENV PATH="/venv/bin:$PATH" \
     PYTHONPATH=/opt/campus \
@@ -62,8 +62,8 @@ FROM base AS inference
 
 COPY --from=builder --chown=appuser:appgroup /venv /venv
 
-COPY --chown=appuser:appgroup ml/       ./ml/
-COPY --chown=appuser:appgroup shared/   ./shared/
+COPY --chown=appuser:appgroup services/ml-prediction/ ./ml/
+COPY --chown=appuser:appgroup shared/              ./shared/
 
 ENV PATH="/venv/bin:$PATH" \
     PYTHONPATH=/opt/campus \
