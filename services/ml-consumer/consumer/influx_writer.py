@@ -45,7 +45,8 @@ class InfluxWriter:
         """Write a sensor reading to InfluxDB."""
         await self._ensure_connected()
 
-        measurement = str(payload.get("sensor_type") or topic.split(".")[-1])
+        sensor_type = str(payload.get("sensor_type") or topic.split(".")[-1])
+        measurement = f"sensor_{sensor_type}"
         room_id = str(payload.get("room_id", "unknown"))
         sensor_id = str(payload.get("sensor_id", "unknown"))
         building_id = str(payload.get("building_id") or payload.get("building") or "unknown")
@@ -61,7 +62,7 @@ class InfluxWriter:
             .tag("unit", str(payload.get("unit", "")))
         )
 
-        if measurement == "temperature":
+        if sensor_type == "temperature":
             val = payload.get("value") or payload.get("temperature")
             if val is not None:
                 point = point.field("value", float(val))
@@ -70,13 +71,13 @@ class InfluxWriter:
             if humidity is not None:
                 point = point.field("humidity", float(humidity))
 
-        elif measurement == "occupancy":
+        elif sensor_type == "occupancy":
             val = payload.get("value") or payload.get("occupancy") or payload.get("count")
             if val is not None:
                 point = point.field("value", float(val))
                 point = point.field("count", int(val))
 
-        elif measurement == "energy":
+        elif sensor_type == "energy":
             val = payload.get("value") or payload.get("energy") or payload.get("kwh")
             if val is not None:
                 point = point.field("value", float(val))
@@ -119,7 +120,7 @@ class InfluxWriter:
         except Exception as exc:
             logger.error(
                 "InfluxDB write failed",
-                extra={"measurement": measurement, "room_id": room_id, "error": str(exc)},
+                extra={"measurement": measurement, "sensor_type": sensor_type, "room_id": room_id, "error": str(exc)},
                 exc_info=True,
             )
             raise

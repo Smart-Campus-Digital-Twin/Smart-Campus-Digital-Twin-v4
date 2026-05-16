@@ -30,6 +30,16 @@ spec:
           env:
             - name: REDIS_URL
               value: redis://redis:6379/0
+            - name: INFLUXDB_URL
+              value: http://influxdb:8086
+            - name: INFLUXDB_ORG
+              value: smart-campus
+            - name: INFLUXDB_BUCKET_RAW
+              value: campus_sensors
+            - name: INFLUXDB_BUCKET_1M
+              value: campus_1m
+            - name: INFLUXDB_BUCKET_1H
+              value: campus_1h
           resources:
             requests:
               memory: 32Mi

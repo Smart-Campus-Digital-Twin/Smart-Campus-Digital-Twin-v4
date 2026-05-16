@@ -164,7 +164,7 @@ from(bucket: "{config.influxdb_bucket_raw}")
         flux = f"""
 from(bucket: "{config.influxdb_bucket_raw}")
   |> range(start: -{range_minutes}m)
-  |> filter(fn: (r) => r._measurement == "sensors")
+  |> filter(fn: (r) => r._measurement =~ /^sensor_[a-z]/)
   |> filter(fn: (r) => r.building_id == "{building_id}")
   |> filter(fn: (r) => r._field == "value")
   |> last()
