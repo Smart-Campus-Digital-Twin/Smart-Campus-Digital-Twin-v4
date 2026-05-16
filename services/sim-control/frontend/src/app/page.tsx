@@ -116,7 +116,33 @@ export default function Home() {
           React.createElement('span', { className: 'inline-block w-2 h-2 rounded-full ' + (cfg.mqtt.connected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500') }),
           React.createElement('span', { className: 'text-slate-300 font-mono' }, cfg.mqtt.host + ':' + cfg.mqtt.port)
         ),
-        React.createElement('span', { className: 'text-slate-500' }, 'every ' + cfg.publish_interval_s + 's'),
+        React.createElement('span', { className: 'flex items-center gap-1 text-slate-500' },
+          'every',
+          React.createElement('input', {
+            type: 'number',
+            min: 0.5,
+            max: 600,
+            step: 0.5,
+            defaultValue: cfg.publish_interval_s,
+            key: 'iv-' + cfg.publish_interval_s,
+            onBlur: async (e: any) => {
+              const v = Number(e.target.value);
+              if (!isFinite(v) || v <= 0) return;
+              try {
+                const r = await fetch(API + '/api/interval', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ seconds: v }),
+                });
+                if (r.ok) { fetchCfg(); showToast({ kind: 'ok', text: `Interval set to ${v}s` }); }
+                else showToast({ kind: 'err', text: 'Interval update failed' });
+              } catch (err) { showToast({ kind: 'err', text: 'Interval update failed' }); }
+            },
+            onKeyDown: (e: any) => { if (e.key === 'Enter') e.currentTarget.blur(); },
+            className: 'w-14 bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-200 text-xs text-right',
+          }),
+          's'
+        ),
         React.createElement('button', { onClick: openEdit, className: 'flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300' },
           React.createElement(Settings, { size: 12 }), 'Broker'
         ),

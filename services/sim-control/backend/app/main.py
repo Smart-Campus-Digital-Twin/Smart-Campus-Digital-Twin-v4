@@ -27,7 +27,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sim-control.main")
 
-PUBLISH_INTERVAL_S = float(os.getenv("PUBLISH_INTERVAL_S", "5.0"))
+_INTERVAL_MIN_S = 0.5
+_INTERVAL_MAX_S = 600.0
+
+
+class _PublishInterval:
+    """Mutable holder for the publish interval — read by the loop each tick."""
+
+    def __init__(self, initial: float) -> None:
+        self._value = max(_INTERVAL_MIN_S, min(_INTERVAL_MAX_S, initial))
+
+    def get(self) -> float:
+        return self._value
+
+    def set(self, value: float) -> float:
+        self._value = max(_INTERVAL_MIN_S, min(_INTERVAL_MAX_S, value))
+        return self._value
+
+
+publish_interval = _PublishInterval(float(os.getenv("PUBLISH_INTERVAL_S", "5.0")))
 
 
 def _initial_mqtt_config() -> dict:
@@ -91,7 +109,7 @@ def _publish_loop() -> None:
             reading = _apply_rules(reading)
             topic = _build_mqtt_topic(reading)
             mqtt.publish(topic, reading.model_dump())
-        _stop_event.wait(PUBLISH_INTERVAL_S)
+        _stop_event.wait(publish_interval.get())
     mqtt.disconnect()
     logger.info("Publish loop stopped")
 
@@ -146,7 +164,9 @@ async def health():
 async def config():
     return {
         "mqtt": mqtt.status(),
-        "publish_interval_s": PUBLISH_INTERVAL_S,
+        "publish_interval_s": publish_interval.get(),
+        "publish_interval_min_s": _INTERVAL_MIN_S,
+        "publish_interval_max_s": _INTERVAL_MAX_S,
         "topics": {
             "temperature": "campus/temperature",
             "occupancy": "campus/occupancy",
@@ -187,6 +207,26 @@ async def mqtt_messages(limit: int = 100, direction: str | None = None):
 async def mqtt_messages_clear():
     mqtt.clear_messages()
     return {"cleared": True}
+
+
+class IntervalIn(BaseModel):
+    seconds: float
+
+
+@app.get("/api/interval")
+async def get_interval():
+    return {
+        "seconds": publish_interval.get(),
+        "min": _INTERVAL_MIN_S,
+        "max": _INTERVAL_MAX_S,
+    }
+
+
+@app.put("/api/interval")
+async def set_interval(body: IntervalIn):
+    new_val = publish_interval.set(body.seconds)
+    logger.info(f"Publish interval set to {new_val}s")
+    return {"seconds": new_val}
 
 
 class MqttConfigIn(BaseModel):
