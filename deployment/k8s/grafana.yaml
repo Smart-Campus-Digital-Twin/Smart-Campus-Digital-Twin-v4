@@ -50,6 +50,8 @@ spec:
                 name: campus-common
             - secretRef:
                 name: grafana-env
+            - secretRef:
+                name: influxdb-env
           resources:
             requests:
               memory: 32Mi

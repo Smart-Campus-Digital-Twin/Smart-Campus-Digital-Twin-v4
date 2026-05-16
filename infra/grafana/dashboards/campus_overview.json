@@ -1,11 +1,28 @@
 {
   "__inputs": [],
   "__requires": [
-    { "type": "grafana",    "id": "grafana",  "name": "Grafana",    "version": "11.0.0" },
-    { "type": "datasource", "id": "influxdb", "name": "InfluxDB",   "version": "1.0.0"  },
-    { "type": "datasource", "id": "postgres", "name": "PostgreSQL", "version": "1.0.0"  }
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "version": "1.0.0"
+    }
   ],
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "description": "Real-time campus sensor overview with ML predictions",
   "editable": true,
   "fiscalYearStartMonth": 0,
@@ -13,257 +30,548 @@
   "id": null,
   "links": [],
   "panels": [
-
-    { "id": 2, "title": "Campus Total Power (W)", "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+    {
+      "id": 2,
+      "title": "Campus Total Power (W)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value", "graphMode": "area"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
       },
-      "fieldConfig": { "defaults": { "unit": "watt", "decimals": 0 } },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_raw\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"sensor_energy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"room_id\"])\n  |> last()\n  |> group()\n  |> sum()"
-      }]
-    },
-
-    { "id": 3, "title": "Campus Avg Occupancy (persons)", "type": "gauge",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "minVizWidth": 75, "minVizHeight": 75
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short", "decimals": 0,
-          "min": 0, "max": 500,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green",  "value": null },
-              { "color": "yellow", "value": 200 },
-              { "color": "red",    "value": 400 }
-            ]
-          }
-        }
-      },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_1m\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"sensor_1m_occupancy\")\n  |> filter(fn: (r) => r._field == \"avg\")\n  |> last()\n  |> group()\n  |> mean()"
-      }]
-    },
-
-    { "id": 4, "title": "Active Anomalies (last 1h)", "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background", "graphMode": "none"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green",  "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red",    "value": 5 }
-            ]
-          }
-        }
-      },
-      "targets": [{
-        "refId": "A",
-        "rawSql": "SELECT COUNT(*) AS count FROM anomalies WHERE detected_at > NOW() - INTERVAL '1 hour'",
-        "format": "table"
-      }]
-    },
-
-    { "id": 10, "title": "Buildings Reporting Yesterday", "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
-      "description": "Count of buildings that submitted energy data yesterday. Expect 25.",
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background", "graphMode": "none"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red",    "value": null },
-              { "color": "yellow", "value": 10 },
-              { "color": "green",  "value": 20 }
-            ]
-          }
-        }
-      },
-      "targets": [{
-        "refId": "A",
-        "rawSql": "SELECT COUNT(DISTINCT building_id) AS \"Buildings Reporting\" FROM energy_daily WHERE date = CURRENT_DATE - INTERVAL '1 day'",
-        "format": "table"
-      }]
-    },
-
-    { "id": 5, "title": "Temperature — All Rooms (last 30 min)", "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 4 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "celsius",
-          "custom": { "lineWidth": 1, "fillOpacity": 0 }
-        }
-      },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_1m\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_1m_temperature\")\n  |> filter(fn: (r) => r._field == \"avg\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"room_id\"])"
-      }]
-    },
-
-    { "id": 6, "title": "Energy by Building (W)", "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 4 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
       "fieldConfig": {
         "defaults": {
           "unit": "watt",
-          "custom": { "lineWidth": 2, "fillOpacity": 5 }
+          "decimals": 0
         }
       },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_1m\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_1m_energy\")\n  |> filter(fn: (r) => r._field == \"avg\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_raw\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"sensor_energy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"room_id\"])\n  |> last()\n  |> group()\n  |> sum()"
+        }
+      ]
     },
-
-    { "id": 7, "title": "Recent Anomalies", "type": "table",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
-      "options": {
-        "sortBy": [{ "displayName": "detected_at", "desc": true }],
-        "footer": { "show": false }
+    {
+      "id": 3,
+      "title": "Campus Avg Occupancy (persons)",
+      "type": "gauge",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
       },
-      "targets": [{
-        "refId": "A",
-        "rawSql": "SELECT detected_at, building_id, room_id, sensor_type, anomaly_type, severity, value, threshold, message FROM anomalies ORDER BY detected_at DESC LIMIT 50",
-        "format": "table"
-      }],
-      "fieldConfig": {
-        "overrides": [{
-          "matcher": { "id": "byName", "options": "severity" },
-          "properties": [
-            { "id": "custom.displayMode", "value": "color-background" },
-            { "id": "mappings", "value": [{
-              "options": {
-                "critical": { "color": "red",    "index": 0 },
-                "warning":  { "color": "yellow", "index": 1 },
-                "info":     { "color": "blue",   "index": 2 }
-              },
-              "type": "value"
-            }]}
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
           ]
-        }]
+        },
+        "minVizWidth": 75,
+        "minVizHeight": 75
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "max": 500,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 400
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"sensor_occupancy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> last()\n  |> group()\n  |> mean()"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Active Anomalies (last 1h)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT COUNT(*) AS count FROM anomalies WHERE detected_at > NOW() - INTERVAL '1 hour'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Buildings Reporting Yesterday",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "description": "Count of buildings that submitted energy data yesterday. Expect 25.",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "green",
+                "value": 20
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT COUNT(DISTINCT building_id) AS \"Buildings Reporting\" FROM energy_daily WHERE date = CURRENT_DATE - INTERVAL '1 day'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Temperature \u2014 All Rooms (last 30 min)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_temperature\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"room_id\"])"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Energy by Building (W)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_energy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Recent Anomalies",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "detected_at",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT detected_at, building_id, room_id, sensor_type, anomaly_type, severity, value, threshold, message FROM anomalies ORDER BY detected_at DESC LIMIT 50",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "severity"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "warning": {
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "info": {
+                        "color": "blue",
+                        "index": 2
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     },
-
-    { "id": 8, "title": "Hourly Energy Trend (kWh)", "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+    {
+      "id": 8,
+      "title": "Hourly Energy Trend (kWh)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "kwatth",
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true, "showPoints": "always", "pointSize": 4 }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true,
+            "showPoints": "always",
+            "pointSize": 4
+          }
         }
       },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_1m\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"sensor_1m_energy\")\n  |> filter(fn: (r) => r._field == \"avg\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"sensor_energy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
+        }
+      ]
     },
-
-    { "id": 9, "title": "Daily Energy — Actual (yesterday, per building)", "type": "barchart",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
-      "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
+    {
+      "id": 9,
+      "title": "Daily Energy \u2014 Actual (yesterday, per building)",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "description": "Total kWh per building for yesterday from the Spark daily rollup (runs at 00:30).",
       "options": {
         "orientation": "horizontal",
         "groupWidth": 0.7,
         "barWidth": 0.9,
-        "legend": { "displayMode": "list", "placement": "bottom" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       },
       "fieldConfig": {
-        "defaults": { "unit": "kwatth", "decimals": 1 }
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1
+        }
       },
-      "targets": [{
-        "refId": "A",
-        "rawSql": "SELECT building_id, total_kwh FROM energy_daily WHERE date = CURRENT_DATE - INTERVAL '1 day' ORDER BY total_kwh DESC",
-        "format": "table"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT building_id, total_kwh FROM energy_daily WHERE date = CURRENT_DATE - INTERVAL '1 day' ORDER BY total_kwh DESC",
+          "format": "table"
+        }
+      ]
     },
-
-    { "id": 11, "title": "Hourly Temperature Avg (24h)", "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+    {
+      "id": 11,
+      "title": "Hourly Temperature Avg (24h)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "celsius",
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true, "showPoints": "always", "pointSize": 4 }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true,
+            "showPoints": "always",
+            "pointSize": 4
+          }
         }
       },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_1m\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"sensor_1m_temperature\")\n  |> filter(fn: (r) => r._field == \"avg\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"sensor_temperature\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
+        }
+      ]
     },
-
-    { "id": 12, "title": "Occupancy Trend — Per Building (24h)", "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+    {
+      "id": 12,
+      "title": "Occupancy Trend \u2014 Per Building (24h)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true, "showPoints": "always", "pointSize": 4 }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true,
+            "showPoints": "always",
+            "pointSize": 4
+          }
         }
       },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_1m\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"sensor_1m_occupancy\")\n  |> filter(fn: (r) => r._field == \"avg\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"sensor_occupancy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"building_id\"])\n  |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"building_id\"])"
+        }
+      ]
     },
-
-    { "id": 13, "title": "ML Predictions", "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+    {
+      "id": 13,
+      "title": "ML Predictions",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
       "collapsed": false,
       "panels": []
     },
-
-    { "id": 20,
-      "title": "Canteen Congestion — Actual vs Predicted (persons)",
+    {
+      "id": 20,
+      "title": "Canteen Congestion \u2014 Actual vs Predicted (persons)",
       "type": "timeseries",
-      "description": "Real-time XGBoost predictions from the Flink congestion job. Requires ≥24h of occupancy history per room. Shows 'No data' until the prediction lag warms up.",
-      "gridPos": { "h": 11, "w": 12, "x": 0, "y": 39 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+      "description": "Real-time XGBoost predictions from the Flink congestion job. Requires \u226524h of occupancy history per room. Shows 'No data' until the prediction lag warms up.",
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": false }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": false
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
             "properties": [
-              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 4] } },
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } },
-              { "id": "custom.lineWidth", "value": 2 }
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
             ]
           }
         ]
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -276,32 +584,71 @@
         }
       ]
     },
-
-    { "id": 21,
-      "title": "Library Congestion — Actual vs Predicted (persons)",
+    {
+      "id": 21,
+      "title": "Library Congestion \u2014 Actual vs Predicted (persons)",
       "type": "timeseries",
-      "description": "Real-time XGBoost predictions from the Flink congestion job. Requires ≥24h of occupancy history per room.",
-      "gridPos": { "h": 11, "w": 12, "x": 12, "y": 39 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+      "description": "Real-time XGBoost predictions from the Flink congestion job. Requires \u226524h of occupancy history per room.",
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": false }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": false
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
             "properties": [
-              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 4] } },
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } },
-              { "id": "custom.lineWidth", "value": 2 }
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
             ]
           }
         ]
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -314,31 +661,66 @@
         }
       ]
     },
-
-    { "id": 22,
-      "title": "Energy Forecast vs Actual — Next-Day kWh (per building)",
+    {
+      "id": 22,
+      "title": "Energy Forecast vs Actual \u2014 Next-Day kWh (per building)",
       "type": "timeseries",
       "description": "Solid = actual from energy_daily. Dashed = ML next-day forecast from ml_energy_features (written by the Airflow ml_energy_batch_inference DAG at 01:30 daily).",
-      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 50 },
-      "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 50
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "kwatth", "decimals": 1,
-          "custom": { "lineWidth": 2, "fillOpacity": 5, "showPoints": "always", "pointSize": 4 }
+          "unit": "kwatth",
+          "decimals": 1,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "showPoints": "always",
+            "pointSize": 4
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
             "properties": [
-              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 4] } },
-              { "id": "custom.lineWidth", "value": 2 }
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
             ]
           }
         ]
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -353,16 +735,30 @@
         }
       ]
     },
-
-    { "id": 23,
+    {
+      "id": 23,
       "title": "Prediction Pipeline Status",
       "type": "stat",
-      "description": "Count of real-time congestion predictions written to campus_predictions in the last hour. Starts accumulating after ≥24h of occupancy warm-up.",
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 50 },
-      "datasource": { "type": "influxdb", "uid": "P951FEA4DE68E13C5" },
+      "description": "Count of real-time congestion predictions written to campus_predictions in the last hour. Starts accumulating after \u226524h of occupancy warm-up.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P951FEA4DE68E13C5"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background", "graphMode": "none", "textMode": "auto"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
       },
       "fieldConfig": {
         "defaults": {
@@ -370,28 +766,53 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red",    "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "green",  "value": 10 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 10
+              }
             ]
           }
         }
       },
-      "targets": [{
-        "refId": "A",
-        "query": "from(bucket: \"campus_predictions\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"predicted_occupancy\")\n  |> filter(fn: (r) => r._field == \"predicted_avg\")\n  |> group()\n  |> count()"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"campus_predictions\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"predicted_occupancy\")\n  |> filter(fn: (r) => r._field == \"predicted_avg\")\n  |> group()\n  |> count()"
+        }
+      ]
     },
-
-    { "id": 24,
-      "title": "ML Batch Inference — Last Run",
+    {
+      "id": 24,
+      "title": "ML Batch Inference \u2014 Last Run",
       "type": "stat",
       "description": "Most recent date for which a next-day energy forecast exists in ml_energy_features.",
-      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 54 },
-      "datasource": { "type": "postgres", "uid": "PCC52D03280B7034C" },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 54
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background", "graphMode": "none", "textMode": "auto"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
       },
       "fieldConfig": {
         "defaults": {
@@ -399,20 +820,30 @@
           "unit": "dateTimeAsLocal"
         }
       },
-      "targets": [{
-        "refId": "A",
-        "rawSql": "SELECT EXTRACT(EPOCH FROM MAX(written_at)) * 1000 AS value FROM ml_energy_features",
-        "format": "table"
-      }]
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM MAX(written_at)) * 1000 AS value FROM ml_energy_features",
+          "format": "table"
+        }
+      ]
     }
-
   ],
-
   "refresh": "10s",
   "schemaVersion": 39,
-  "tags": ["campus", "overview", "ml", "predictions"],
-  "templating": { "list": [] },
-  "time": { "from": "now-1h", "to": "now" },
+  "tags": [
+    "campus",
+    "overview",
+    "ml",
+    "predictions"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "Asia/Colombo",
   "title": "Campus Overview",

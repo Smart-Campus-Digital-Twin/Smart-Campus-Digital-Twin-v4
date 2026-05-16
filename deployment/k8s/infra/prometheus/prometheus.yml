@@ -21,10 +21,12 @@ scrape_configs:
       - source_labels: [__meta_kubernetes_pod_label_app]
         action: keep
         regex: node-exporter
+      # Strip any existing port from __address__ before appending :9100 so we
+      # never produce <ip>:9100:9100.
       - source_labels: [__address__]
         action: replace
-        regex: (.+)
-        replacement: ${1}:9100
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '${1}:9100'
         target_label: __address__
       - source_labels: [__meta_kubernetes_pod_node_name]
         target_label: node
