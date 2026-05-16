@@ -63,7 +63,7 @@ jobs:
             {"service":"ml-consumer","dockerfile":"services/ml-consumer/consumer/Dockerfile","context":"."},
             {"service":"ml-prediction","dockerfile":"services/ml-prediction/Dockerfile","context":"."},
             {"service":"ml-retrain","dockerfile":"services/ml-retrain/Dockerfile","context":"."},
-            {"service":"sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"services/sim-control/backend"},
+            {"service":"sim-control-backend","dockerfile":"services/sim-control/backend/Dockerfile","context":"."},
             {"service":"sim-control-frontend","dockerfile":"services/sim-control/frontend/Dockerfile","context":"services/sim-control/frontend","build_args":"NEXT_PUBLIC_API_URL=https://sim-control.168-144-48-147.nip.io"}
           ]'
 

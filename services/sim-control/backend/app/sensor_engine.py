@@ -48,7 +48,10 @@ class SensorEngine:
         else:
             value = self._normal(cfg)
 
-        value = round(value, 2)
+        if str(sensor.sensor_type) == "occupancy":
+            value = max(0, int(round(value)))
+        else:
+            value = round(value, 2)
         self._last_values[sensor.id] = value
         buf = self._history.setdefault(sensor.id, deque(maxlen=HISTORY_LEN))
         buf.append((now_ms, value))
@@ -65,7 +68,10 @@ class SensorEngine:
             timestamp=now.isoformat(),
             quality=1.0,
             behavior_mode=str(mode),
-            metadata={"sensor_name": sensor.name},
+            metadata={
+                "sensor_name": sensor.name,
+                **({"count": int(value)} if str(sensor.sensor_type) == "occupancy" else {}),
+            },
         )
         self._last_readings[sensor.id] = reading.model_dump()
         return reading
