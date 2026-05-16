@@ -79,7 +79,7 @@ export default function DigitalTwinDashboard() {
     };
 
     fetchZones();
-    const t = setInterval(fetchZones, 5000);
+    const t = setInterval(fetchZones, 2000);
     return () => clearInterval(t);
   }, [isAuthenticated, isReady]);
 

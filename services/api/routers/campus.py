@@ -275,8 +275,8 @@ async def campus_zones(
             hasData=has_data,
         ))
 
-    # Cache for 5 seconds
-    await redis.set(cache_key, [z.model_dump() for z in zones], ttl_seconds=5)
+    # Cache for 2 seconds; influxdb_last() is fast and the UI polls every 5s.
+    await redis.set(cache_key, [z.model_dump() for z in zones], ttl_seconds=2)
 
     return zones
 

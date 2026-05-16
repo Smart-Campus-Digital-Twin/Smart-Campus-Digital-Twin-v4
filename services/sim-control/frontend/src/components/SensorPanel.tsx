@@ -102,6 +102,10 @@ export default function SensorPanel() {
 
   const tog = async (id: string) => { await fetch(API + '/api/sensors/' + id + '/toggle', { method: 'POST' }); fetchS(); };
   const del = async (id: string) => { await fetch(API + '/api/sensors/' + id, { method: 'DELETE' }); fetchS(); };
+  const bulk = async (action: 'enable' | 'disable' | 'reset') => {
+    await fetch(API + '/api/sensors/bulk/' + action, { method: 'POST' });
+    fetchS();
+  };
   const sm = async (id: string, m: BM) => {
     await fetch(API + '/api/sensors/' + id, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -129,7 +133,10 @@ export default function SensorPanel() {
       React.createElement('input', { value: search, onChange: (e: any) => setSearch(e.target.value), placeholder: 'Search name/room/building...', className: 'flex-1 min-w-[200px] bg-slate-800 border border-slate-700 rounded px-3 py-1 text-sm' }),
       React.createElement('button', { onClick: () => setShow(true), className: 'flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold' },
         React.createElement(Plus, { size: 16 }), 'Add'
-      )
+      ),
+      React.createElement('button', { onClick: () => bulk('enable'), className: 'bg-slate-800 hover:bg-slate-700 border border-emerald-700 text-emerald-300 px-3 py-2 rounded-lg text-xs font-semibold' }, 'All On'),
+      React.createElement('button', { onClick: () => bulk('disable'), className: 'bg-slate-800 hover:bg-slate-700 border border-rose-700 text-rose-300 px-3 py-2 rounded-lg text-xs font-semibold' }, 'All Off'),
+      React.createElement('button', { onClick: () => bulk('reset'), className: 'bg-slate-800 hover:bg-slate-700 border border-amber-700 text-amber-300 px-3 py-2 rounded-lg text-xs font-semibold' }, 'Reset')
     ),
     err && React.createElement('div', { className: 'bg-red-950 border border-red-800 text-red-200 rounded-xl p-4 text-sm mb-3' }, err),
     React.createElement('div', { className: 'grid gap-2' },

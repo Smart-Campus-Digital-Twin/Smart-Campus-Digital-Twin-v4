@@ -335,29 +335,45 @@ export default function DashboardSidebar({
               selectedZone.hasData ? selectedZone.status.toUpperCase() : "NO DATA",
               selectedZone.hasData ? STATUS_COLORS[selectedZone.status] : "#888",
             ],
-            ["Avg. Energy",    selectedZone.hasData ? `${animatedEnergy.toFixed(1)} kW` : "—",    "#97FEED"],
-            [
-              "Occupancy",
-              selectedZone.hasData
-                ? `${selectedZone.currentOccupancy ?? 0} / ${selectedZone.totalCapacity ?? 0} (${animatedOccupancy}% capped, ${selectedZone.occupancyTheoretical ?? animatedOccupancy}% raw)`
-                : "—",
-              "#97FEED",
-            ],
-            ["Avg. Temp",      selectedZone.hasData ? `${animatedTemp.toFixed(1)}°C` : "—",       "#97FEED"],
-          ].map(([label, value, color], i) => (
+            ["Avg. Energy", selectedZone.hasData ? `${animatedEnergy.toFixed(1)} kW` : "—", "#97FEED"],
+            ["Avg. Temp", selectedZone.hasData ? `${animatedTemp.toFixed(1)}°C` : "—", "#97FEED"],
+          ].map(([label, value, color], i, arr) => (
             <div
               key={i}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                paddingBottom: i < 3 ? 8 : 0,
-                borderBottom: i < 3 ? "1px solid rgba(53,162,159,0.2)" : "none",
+                paddingBottom: i < arr.length - 1 ? 8 : 0,
+                borderBottom: i < arr.length - 1 ? "1px solid rgba(53,162,159,0.2)" : "none",
               }}
             >
               <span style={{ color: "#97FEED" }}>{label}</span>
               <span style={{ color, fontWeight: 700 }}>{value}</span>
             </div>
           ))}
+          {selectedZone.hasData && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(53,162,159,0.2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ color: "#97FEED" }}>Occupancy</span>
+                <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>
+                  {selectedZone.currentOccupancy ?? 0}
+                  <span style={{ color: "#97FEED", fontWeight: 500, fontSize: 12 }}>
+                    {" / "}
+                    {selectedZone.totalCapacity ?? 0}
+                  </span>
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "rgba(151,254,237,0.7)" }}>
+                <span>{animatedOccupancy}% used</span>
+                {selectedZone.occupancyTheoretical !== undefined &&
+                  selectedZone.occupancyTheoretical !== animatedOccupancy && (
+                    <span title="Raw sensor reading before capping">
+                      raw {selectedZone.occupancyTheoretical}%
+                    </span>
+                  )}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ marginTop: 12 }}>
           <div

@@ -220,6 +220,52 @@ async def seed_sensors():
     return {"seeded": added, "total_topology": len(seeds), "total_store": len(_sensors)}
 
 
+@router.post("/sensors/bulk/enable")
+async def bulk_enable_sensors():
+    n = 0
+    for sensor in _sensors.values():
+        if not sensor.enabled:
+            sensor.enabled = True
+            sensor.updated_at = datetime.now(UTC).isoformat()
+            n += 1
+    _persist()
+    _add_log("", "", "bulk_enable", f"Enabled {n} sensors")
+    return {"changed": n, "total": len(_sensors)}
+
+
+@router.post("/sensors/bulk/disable")
+async def bulk_disable_sensors():
+    n = 0
+    for sensor in _sensors.values():
+        if sensor.enabled:
+            sensor.enabled = False
+            sensor.updated_at = datetime.now(UTC).isoformat()
+            n += 1
+    _persist()
+    _add_log("", "", "bulk_disable", f"Disabled {n} sensors")
+    return {"changed": n, "total": len(_sensors)}
+
+
+@router.post("/sensors/bulk/reset")
+async def bulk_reset_sensors():
+    """Re-enable every sensor and reset its behavior_mode back to NORMAL."""
+    n = 0
+    for sensor in _sensors.values():
+        changed = False
+        if not sensor.enabled:
+            sensor.enabled = True
+            changed = True
+        if sensor.behavior_mode != BehaviorMode.NORMAL:
+            sensor.behavior_mode = BehaviorMode.NORMAL
+            changed = True
+        if changed:
+            sensor.updated_at = datetime.now(UTC).isoformat()
+            n += 1
+    _persist()
+    _add_log("", "", "bulk_reset", f"Reset {n} sensors to NORMAL+enabled")
+    return {"changed": n, "total": len(_sensors)}
+
+
 @router.get("/status")
 async def get_status():
     enabled = sum(1 for s in _sensors.values() if s.enabled)
