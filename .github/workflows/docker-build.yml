@@ -115,7 +115,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -154,10 +154,33 @@ jobs:
       matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
 
     steps:
-      - name: Make package public
+      - name: Make package public (best-effort)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_ADMIN_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          SERVICE: ${{ matrix.service }}
         run: |
-          gh api --method PATCH \
-            "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}%2F${{ matrix.service }}/visibility" \
-            -f visibility=public
+          PKG="${REPO}%2F${SERVICE}"
+          echo "Setting visibility=public for package ${OWNER}/${PKG}"
+
+          # Try org endpoint first
+          if gh api --method PATCH \
+              "/orgs/${OWNER}/packages/container/${PKG}/visibility" \
+              -f visibility=public 2>/tmp/err; then
+            echo "OK via /orgs/"
+            exit 0
+          fi
+
+          # Fall back to user endpoint
+          if gh api --method PATCH \
+              "/users/${OWNER}/packages/container/${PKG}/visibility" \
+              -f visibility=public 2>/tmp/err; then
+            echo "OK via /users/"
+            exit 0
+          fi
+
+          echo "::warning::Could not set visibility=public for ${OWNER}/${PKG}. Last error:"
+          cat /tmp/err || true
+          echo "::warning::Set visibility manually in GHCR UI, or grant the token admin:packages scope."
+          exit 0
