@@ -16,7 +16,7 @@
       "anomaly_prob": 0.05
     },
     "created_at": "2026-05-16T07:11:43.069654+00:00",
-    "updated_at": "2026-05-16T07:41:52.404439+00:00"
+    "updated_at": "2026-05-16T12:35:33.940174+00:00"
   },
   "multipurpose-hall-f1-main-hall-temperature": {
     "id": "multipurpose-hall-f1-main-hall-temperature",
@@ -35,7 +35,7 @@
       "anomaly_prob": 0.05
     },
     "created_at": "2026-05-16T07:11:43.069675+00:00",
-    "updated_at": "2026-05-16T07:11:43.069677+00:00"
+    "updated_at": "2026-05-16T12:35:32.701856+00:00"
   },
   "multipurpose-hall-f1-main-hall-occupancy": {
     "id": "multipurpose-hall-f1-main-hall-occupancy",

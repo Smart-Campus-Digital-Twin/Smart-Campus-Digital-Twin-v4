@@ -187,5 +187,41 @@
     "action": "toggled",
     "details": "enabled=True",
     "value": null
+  },
+  {
+    "id": "2bf6cd5b-b74d-4e7f-8e84-288b806a844e",
+    "timestamp": "2026-05-16T12:35:30.229585+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "32f784db-2676-4e51-b878-0781d11272dd",
+    "timestamp": "2026-05-16T12:35:31.873312+00:00",
+    "sensor_id": "multipurpose-hall-f1-main-hall-temperature",
+    "sensor_name": "multipurpose-hall-f1-main-hall temperature",
+    "action": "toggled",
+    "details": "enabled=False",
+    "value": null
+  },
+  {
+    "id": "6789ca2f-cf4c-4d3a-a488-b16c2e9a5d94",
+    "timestamp": "2026-05-16T12:35:32.717503+00:00",
+    "sensor_id": "multipurpose-hall-f1-main-hall-temperature",
+    "sensor_name": "multipurpose-hall-f1-main-hall temperature",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
+  },
+  {
+    "id": "a7e7ffa0-9213-4d5d-9d42-3f0e4029ac53",
+    "timestamp": "2026-05-16T12:35:33.964993+00:00",
+    "sensor_id": "lagaan-f1-stage-occupancy",
+    "sensor_name": "lagaan-f1-stage occupancy",
+    "action": "toggled",
+    "details": "enabled=True",
+    "value": null
   }
 ]
