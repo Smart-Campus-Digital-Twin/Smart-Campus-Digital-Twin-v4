@@ -5,7 +5,8 @@ namespace: campus
 
 resources:
   - namespace.yaml
-  - secrets.yaml
+  # secrets.yaml is applied out-of-band by deployment/k8s/apply-secrets.sh
+  # so ArgoCD does not manage or overwrite real credentials.
   - configmap.yaml
   - configmap-extras.yaml
   - postgres.yaml

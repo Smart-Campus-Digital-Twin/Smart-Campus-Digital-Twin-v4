@@ -125,7 +125,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/v4' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/v4' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
