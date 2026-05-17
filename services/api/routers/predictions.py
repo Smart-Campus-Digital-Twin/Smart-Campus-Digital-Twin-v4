@@ -92,6 +92,50 @@ async def predict_congestion(req: CongestionPredictionRequest):
         ) from exc
 
 
+class SeriesRequest(BaseModel):
+    room_id: str
+    room_type: str = Field(..., pattern="^(canteen|library)$")
+    building_id: str
+    timestamp: str
+    avg: float = Field(..., ge=0)
+    capacity: float = Field(default=100, ge=1)
+    history: list[float] = Field(default_factory=list, max_length=200)
+    steps: int = Field(default=24, ge=1, le=96)
+    step_minutes: int = Field(default=30, ge=5, le=240)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class SeriesPoint(BaseModel):
+    timestamp: str
+    predicted_avg: float
+
+
+class SeriesResponse(BaseModel):
+    room_id: str
+    points: list[SeriesPoint]
+
+
+@router.post("/congestion/series", response_model=SeriesResponse)
+async def predict_congestion_series(req: SeriesRequest):
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{PREDICTION_SERVICE_URL}/predict/congestion/series",
+                json=req.model_dump(),
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as exc:
+        log.error("Series prediction error: %s", exc.response.text)
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=exc.response.json().get("detail", "Series prediction failed"),
+        ) from exc
+    except Exception as exc:
+        log.error("Series prediction call failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Series prediction error: {exc}") from exc
+
+
 @router.get("/models", response_model=ModelInfo)
 async def list_models():
     """List all loaded models in the prediction service."""

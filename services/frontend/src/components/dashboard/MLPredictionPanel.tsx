@@ -12,6 +12,44 @@ interface PredictionData {
   written_to_influx: boolean;
 }
 
+interface SeriesPoint {
+  timestamp: string;
+  predicted_avg: number;
+}
+
+function Sparkline({ points, capacity }: { points: SeriesPoint[]; capacity: number }) {
+  if (points.length < 2) return null;
+  const w = 280;
+  const h = 80;
+  const pad = 4;
+  const ys = points.map((p) => p.predicted_avg);
+  const maxY = Math.max(capacity, ...ys);
+  const minY = 0;
+  const range = maxY - minY || 1;
+  const stepX = (w - pad * 2) / (points.length - 1);
+  const path = points
+    .map((p, i) => {
+      const x = pad + i * stepX;
+      const y = h - pad - ((p.predicted_avg - minY) / range) * (h - pad * 2);
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const area = path + ` L${(pad + (points.length - 1) * stepX).toFixed(1)},${h - pad} L${pad},${h - pad} Z`;
+  const capY = h - pad - ((capacity - minY) / range) * (h - pad * 2);
+  return (
+    <svg width={w} height={h} style={{ display: "block" }}>
+      <line x1={pad} y1={capY} x2={w - pad} y2={capY} stroke="rgba(248,113,113,0.5)" strokeDasharray="3 3" />
+      <path d={area} fill="rgba(151,254,237,0.15)" />
+      <path d={path} fill="none" stroke="#97FEED" strokeWidth="1.5" />
+      {points.map((p, i) => {
+        const x = pad + i * stepX;
+        const y = h - pad - ((p.predicted_avg - minY) / range) * (h - pad * 2);
+        return <circle key={i} cx={x} cy={y} r={1.5} fill="#97FEED" />;
+      })}
+    </svg>
+  );
+}
+
 interface MLPredictionPanelProps {
   selectedZoneId: string;
   selectedZoneName: string;
@@ -31,6 +69,7 @@ export default function MLPredictionPanel({
 }: MLPredictionPanelProps) {
   const { fetchWithAuth, isReady, isAuthenticated } = useAuth();
   const [prediction, setPrediction] = useState<PredictionData | null>(null);
+  const [series, setSeries] = useState<SeriesPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +120,33 @@ export default function MLPredictionPanel({
       if (res.ok) {
         const data = await res.json();
         setPrediction(data);
+        try {
+          const seriesRes = await fetchWithAuth(`${apiUrl}/predictions/congestion/series`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              room_id: selectedZoneId,
+              room_type: roomType,
+              building_id: buildingId || selectedZoneId,
+              timestamp: new Date().toISOString(),
+              avg: actualCount,
+              capacity: cap,
+              history: Array.from({ length: 50 }, () => actualCount),
+              steps: 24,
+              step_minutes: 30,
+              context: {
+                is_weekend: new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : 0,
+                lecture_scale: 1.0,
+              },
+            }),
+          });
+          if (seriesRes.ok) {
+            const sd = await seriesRes.json();
+            setSeries(sd.points || []);
+          }
+        } catch {
+          // non-fatal
+        }
       } else {
         const errData = await res.json().catch(() => ({}));
         setError(errData.detail || "Prediction failed");
@@ -183,9 +249,22 @@ export default function MLPredictionPanel({
               lineHeight: 1.4,
             }}
           >
-            Trend: {prediction.predicted_avg > prediction.actual_avg ? "Increasing" : "Decreasing"} 
+            Trend: {prediction.predicted_avg > prediction.actual_avg ? "Increasing" : "Decreasing"}
             ({Math.abs(Math.round(prediction.predicted_avg - prediction.actual_avg))} people shift expected)
           </div>
+          {series.length > 1 && (
+            <div style={{ background: "rgba(0,0,0,0.25)", borderRadius: 8, padding: 8 }}>
+              <div style={{ fontSize: 9, color: "rgba(151,254,237,0.7)", marginBottom: 4 }}>
+                NEXT {series.length * 30 / 60}H FORECAST
+              </div>
+              <Sparkline points={series} capacity={totalCapacity ?? 100} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(151,254,237,0.6)", marginTop: 2 }}>
+                <span>now</span>
+                <span>peak {Math.round(Math.max(...series.map((p) => p.predicted_avg)))}</span>
+                <span>+{series.length * 30 / 60}h</span>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div style={{ fontSize: "11px", color: "rgba(151, 254, 237, 0.5)" }}>

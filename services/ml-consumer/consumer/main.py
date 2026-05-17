@@ -145,10 +145,24 @@ async def consume_loop(
 
             batch.append((msg.topic, payload))
 
-            # Anomaly checks stay per-message; they are cheap and write to
-            # postgres asynchronously without contributing to the influx
-            # roundtrip overhead that caused consumer lag.
+            # Unify simulator and consumer anomalies: a sim-control payload
+            # with metadata.anomaly=true generates a synthetic event so the
+            # downstream /campus/anomalies/recent feed is the single source
+            # of truth for the frontend.
             anomalies = detector.check(msg.topic, payload)
+            sim_flag = bool((payload.get("metadata") or {}).get("anomaly"))
+            if sim_flag and not anomalies:
+                from datetime import UTC, datetime
+                anomalies.append({
+                    "rule": "simulator_flag",
+                    "topic": msg.topic,
+                    "room_id": payload.get("room_id", "unknown"),
+                    "sensor_id": payload.get("sensor_id", "unknown"),
+                    "value": {"value": payload.get("value"), "behavior_mode": payload.get("behavior_mode")},
+                    "severity": "warning",
+                    "detected_at": datetime.now(UTC).isoformat(),
+                    "raw_payload": payload,
+                })
             for anomaly in anomalies:
                 try:
                     await pg.write_anomaly(anomaly)

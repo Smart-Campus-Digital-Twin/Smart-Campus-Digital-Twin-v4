@@ -72,6 +72,29 @@ class PredictionResponse(BaseModel):
     written_to_influx: bool
 
 
+class SeriesRequest(BaseModel):
+    room_id: str
+    room_type: str = Field(..., pattern="^(canteen|library)$")
+    building_id: str
+    timestamp: str
+    avg: float = Field(..., ge=0)
+    capacity: float = Field(default=100, ge=1)
+    history: list[float] = Field(default_factory=list, max_length=200)
+    steps: int = Field(default=24, ge=1, le=96)
+    step_minutes: int = Field(default=30, ge=5, le=240)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class SeriesPoint(BaseModel):
+    timestamp: str
+    predicted_avg: float
+
+
+class SeriesResponse(BaseModel):
+    room_id: str
+    points: list[SeriesPoint]
+
+
 # ── Lifespan context manager ──────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -239,6 +262,49 @@ async def predict_congestion(req: CongestionPredictionRequest):
         timestamp=req.timestamp,
         written_to_influx=written,
     )
+
+
+@app.post("/predict/congestion/series", response_model=SeriesResponse)
+async def predict_congestion_series(req: SeriesRequest):
+    """Multi-step rolling forecast. Each step appends the prior prediction
+    to the history buffer and advances the timestamp by step_minutes."""
+    model = models.get(req.room_type)
+    if model is None:
+        raise HTTPException(status_code=503, detail=f"Model for room_type '{req.room_type}' not available")
+
+    history = list(req.history)
+    if not history:
+        history = [float(req.avg)] * max(LAGS_NEEDED)
+
+    ts = datetime.fromisoformat(req.timestamp)
+    step = pd.Timedelta(minutes=req.step_minutes)
+
+    points: list[SeriesPoint] = []
+    for i in range(req.steps):
+        future_ts = ts + step * (i + 1)
+        proxy = CongestionPredictionRequest(
+            room_id=req.room_id,
+            room_type=req.room_type,
+            building_id=req.building_id,
+            timestamp=future_ts.isoformat(),
+            avg=history[-1] if history else float(req.avg),
+            capacity=req.capacity,
+            history=history[-50:],
+            context=req.context,
+        )
+        feats = build_congestion_features(proxy)
+        if feats is None:
+            break
+        try:
+            yhat = float(model.predict(pd.DataFrame(feats))[0])
+        except Exception as exc:
+            log.error("Series predict step %d failed: %s", i, exc)
+            break
+        yhat = max(0.0, yhat)
+        history.append(yhat)
+        points.append(SeriesPoint(timestamp=future_ts.isoformat(), predicted_avg=yhat))
+
+    return SeriesResponse(room_id=req.room_id, points=points)
 
 
 @app.get("/models")
