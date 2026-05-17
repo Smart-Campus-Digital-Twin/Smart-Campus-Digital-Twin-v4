@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Brain, TrendingUp } from "lucide-react";
 import { useAuth } from "@/components/auth/KeycloakProvider";
+import { useRouter } from "next/navigation";
 
 interface PredictionData {
   room_id: string;
@@ -33,6 +34,7 @@ export default function MLPredictionPanel({
   const [prediction, setPrediction] = useState<PredictionData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const fetchPrediction = useCallback(async () => {
     if (!isReady || !isAuthenticated) {
@@ -137,12 +139,12 @@ export default function MLPredictionPanel({
         >
           XGBoost Insights
         </span>
-        {loading && (
-          <div style={{ marginLeft: "auto", fontSize: "8px", opacity: 0.6 }}>
-            ANALYZING...
-          </div>
-        )}
       </div>
+      {loading && (
+        <div style={{ fontSize: "8px", opacity: 0.6, color: "#fff", marginTop: "-8px" }}>
+          ANALYZING...
+        </div>
+      )}
 
       {error ? (
         <div style={{ fontSize: "11px", color: "rgba(235, 9, 9, 0.8)" }}>

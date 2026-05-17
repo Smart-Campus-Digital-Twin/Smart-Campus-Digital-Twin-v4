@@ -49,9 +49,6 @@ export default function SensorHealthPanel({ buildingId }: Props) {
           <span className="font-semibold">
             {buildingId ? `SENSOR HEALTH - ${buildingId.toUpperCase()}` : "SENSOR HEALTH"}
           </span>
-          <a href="/sensors" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-blue-400 transition-colors">
-            View All
-          </a>
         </div>
         <span className="text-slate-400">
           {loading
