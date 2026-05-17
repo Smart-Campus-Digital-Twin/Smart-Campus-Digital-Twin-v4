@@ -62,7 +62,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"campus_raw\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"sensor_energy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"room_id\"])\n  |> last()\n  |> group()\n  |> sum()"
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"sensor_energy\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"room_id\"])\n  |> last()\n  |> group()\n  |> sum()"
         }
       ]
     },
@@ -168,7 +168,7 @@
       "targets": [
         {
           "refId": "A",
-          "rawSql": "SELECT COUNT(*) AS count FROM anomalies WHERE detected_at > NOW() - INTERVAL '1 hour'",
+          "rawSql": "SELECT COUNT(*) AS count FROM anomaly_events WHERE detected_at > NOW() - INTERVAL '1 hour'",
           "format": "table"
         }
       ]
@@ -221,7 +221,7 @@
       "targets": [
         {
           "refId": "A",
-          "rawSql": "SELECT COUNT(DISTINCT building_id) AS \"Buildings Reporting\" FROM energy_daily WHERE date = CURRENT_DATE - INTERVAL '1 day'",
+          "rawSql": "SELECT COUNT(DISTINCT building_id) AS \"Buildings\" FROM rooms",
           "format": "table"
         }
       ]
@@ -252,7 +252,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_temperature\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"room_id\"])"
+          "query": "from(bucket: \"campus_sensors\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_temperature\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [\"room_id\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"room_id\"])"
         }
       ]
     },
@@ -314,7 +314,7 @@
       "targets": [
         {
           "refId": "A",
-          "rawSql": "SELECT detected_at, building_id, room_id, sensor_type, anomaly_type, severity, value, threshold, message FROM anomalies ORDER BY detected_at DESC LIMIT 50",
+          "rawSql": "SELECT detected_at, room_id, sensor_id, rule AS anomaly_type, severity, value::text AS details FROM anomaly_events ORDER BY detected_at DESC LIMIT 50",
           "format": "table"
         }
       ],
