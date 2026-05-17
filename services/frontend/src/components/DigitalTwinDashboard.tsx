@@ -195,11 +195,12 @@ export default function DigitalTwinDashboard() {
     <div
       style={{
         display: "flex",
-        height: "100dvh",
+        minHeight: "100dvh",
         width: "100%",
         background:
           "radial-gradient(circle at center, #0B666A 0%, #071952 100%)",
-        overflow: "hidden",
+        overflowX: "hidden",
+        overflowY: "auto",
         color: "#fff",
         fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
         paddingTop: `${topInset}px`,
@@ -302,7 +303,9 @@ export default function DigitalTwinDashboard() {
           padding: isLandscape ? 0 : isMobile ? 8 : 24,
           gap: isLandscape ? 0 : isMobile ? 8 : 24,
           overflow: "hidden",
-          minHeight: 0,
+          height: "100dvh",
+          position: "sticky",
+          top: 0,
         }}
       >
         {!isLandscape && (
