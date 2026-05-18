@@ -206,8 +206,15 @@ class ZoneOccupancySensor(OccupancySensor):
                     drain *= _EVENT_CROWD_DRAIN.get(evt_type, {}).get(self.room_type, 1.0)
                 ratio *= drain
 
-        # Optional evening tutorial / club event (classrooms & labs only)
-        if not zone_ctx.is_weekend and self.room_type in ("classroom", "lab") and (17.25 <= hour < 21.0):
+        # Optional evening tutorial / club event (classrooms & labs only).
+        # Skip on weekends, holidays, vacation periods, and outside curfew window.
+        if (
+            not zone_ctx.is_weekend
+            and not zone_ctx.is_holiday
+            and not zone_ctx.academic_day.is_essentially_empty
+            and self.room_type in ("classroom", "lab")
+            and (17.25 <= hour < 21.0)
+        ):
             ratio = self._apply_evening_event(hour, ratio)
 
         return self._apply_flow(ratio)

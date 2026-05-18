@@ -24,17 +24,17 @@ class OfficeZone(BaseZone):
     def _target_ratio(self, ctx: ZoneContext) -> float:
         hour = ctx.hour
 
-        # Closed overnight and weekends
-        if hour < 6.0 or hour >= 22.0:
+        # Strict office hours — locked outside 07:30-18:00
+        if hour < 7.5 or hour >= 18.0:
             return 0.0
 
-        # Holidays: skeleton staff only
+        # Holidays: skeleton staff only, daytime window
         if ctx.is_holiday:
-            return 0.05
+            return 0.05 if 9.0 <= hour < 15.0 else 0.0
 
-        # Weekends: minimal staff
+        # Weekends: minimal staff, daytime window
         if ctx.is_weekend:
-            return 0.05
+            return 0.05 if 9.0 <= hour < 14.0 else 0.0
 
         # Vacation / marking: skeleton crew only
         if ctx.academic_day.is_essentially_empty:

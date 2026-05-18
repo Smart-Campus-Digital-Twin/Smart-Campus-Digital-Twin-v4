@@ -25,13 +25,17 @@ class LibraryZone(BaseZone):
     def _target_ratio(self, ctx: ZoneContext) -> float:
         hour = ctx.hour
 
-        # Closed overnight
+        # Closed overnight — doors locked 21:00 to 08:00
         if hour < 8.0 or hour >= 21.0:
             return 0.0
 
-        # Holidays: minimal access
+        # Holidays: closed entirely
         if ctx.is_holiday:
-            return 0.20
+            return 0.0
+
+        # Vacation / marking period with no exams: empty library
+        if ctx.academic_day.is_essentially_empty and not ctx.is_exam_period:
+            return 0.0
 
         # Weekends: library still popular for study
         base = _library_ratio(hour, ctx.is_exam_period)

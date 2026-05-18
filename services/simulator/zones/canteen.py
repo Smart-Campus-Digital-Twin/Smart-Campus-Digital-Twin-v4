@@ -24,17 +24,20 @@ class CanteenZone(BaseZone):
     def _target_ratio(self, ctx: ZoneContext) -> float:
         hour = ctx.hour
 
-        # Closed overnight
+        # Closed overnight — kitchen shuts 20:00, opens 06:30
         if hour < 6.5 or hour >= 20.0:
             return 0.0
 
-        # Holidays: minimal staff only
+        # Holidays: minimal staff only, daytime window
         if ctx.is_holiday:
-            return 0.15
+            return 0.15 if 10.0 <= hour < 15.0 else 0.0
 
-        # Weekends: reduced but still meal traffic
+        # Weekends: reduced but still meal traffic — only around meal hours
         base = _canteen_ratio(hour)
         if ctx.is_weekend:
+            # Hard close outside meal windows on weekends
+            if not (7.0 <= hour < 14.0 or 18.0 <= hour < 20.0):
+                return 0.0
             base *= 0.40
 
         # Scale by academic calendar congestion

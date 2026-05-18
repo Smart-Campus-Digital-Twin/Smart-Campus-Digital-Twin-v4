@@ -39,22 +39,27 @@ class ClassroomZone(BaseZone):
     def _target_ratio(self, ctx: ZoneContext) -> float:
         hour = ctx.hour
 
-        # Curfew: 22:00-06:00
-        if hour >= 22.0 or hour < 6.0:
+        # Curfew: 21:00-07:00 — classrooms locked at night
+        if hour >= 21.0 or hour < 7.0:
             return 0.0
 
         # Holidays: a small residual of postgrad researchers and maintenance staff
-        # remain on campus even on public holidays.
+        # remain on campus even on public holidays, but only during daytime.
         if ctx.is_holiday:
-            return 0.03
+            return 0.03 if 9.0 <= hour < 17.0 else 0.0
 
         # Weekends
         if ctx.is_weekend:
             if self.has_weekend_classes:
-                # IT/Arch have Sat classes
-                ratio = _lecture_ratio(hour) if hour < 17.0 else 0.0
-                # Scale down for weekend
+                # IT/Arch have Sat classes — daytime only
+                if hour < 8.0 or hour >= 17.0:
+                    return 0.0
+                ratio = _lecture_ratio(hour)
                 return ratio * 0.40
+            return 0.0
+
+        # Vacation / marking period: no one in classrooms
+        if ctx.academic_day.is_essentially_empty:
             return 0.0
 
         # Normal academic day

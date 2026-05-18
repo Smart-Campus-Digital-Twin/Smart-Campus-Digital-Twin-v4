@@ -28,8 +28,8 @@ class AuditoriumZone(BaseZone):
         if self.building_id in ctx.active_venue_fill:
             return ctx.active_venue_fill[self.building_id]
 
-        # Closed overnight
-        if hour < 6.0 or hour >= 22.0:
+        # Closed overnight — auditoriums lock at 21:00, unlock 07:00
+        if hour < 7.0 or hour >= 21.0:
             return 0.0
 
         # Holidays: empty unless event
@@ -38,6 +38,10 @@ class AuditoriumZone(BaseZone):
 
         # Weekends: empty unless event (covered by active_venue_fill check above)
         if ctx.is_weekend:
+            return 0.0
+
+        # Vacation / marking period: no lectures = empty hall
+        if ctx.academic_day.is_essentially_empty:
             return 0.0
 
         # Exam periods: used for large batch exams
