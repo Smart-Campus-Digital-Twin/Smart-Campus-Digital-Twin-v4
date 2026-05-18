@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, LogIn, LogOut, UserPlus } from "lucide-react";
+import { Building2, LogIn, LogOut, UserPlus, Activity, Brain } from "lucide-react";
 import { useAuth } from "@/components/auth/KeycloakProvider";
 
 export default function Navbar() {
@@ -61,6 +61,49 @@ export default function Navbar() {
           UOM<span style={{ color: "#97FEED" }}>Twin</span>
         </span>
       </Link>
+
+      <div style={{ display: "flex", gap: "1rem", alignItems: "center", marginLeft: "auto", marginRight: "1.5rem" }}>
+        <Link href="/sensors" style={{ textDecoration: "none" }}>
+          <button
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.5rem 0.85rem",
+              borderRadius: 8,
+              border: "1px solid rgba(151, 254, 237, 0.35)",
+              background: "rgba(11, 102, 106, 0.5)",
+              color: "#97FEED",
+              fontSize: "0.8rem",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            <Activity size={14} />
+            Sensors
+          </button>
+        </Link>
+        <Link href="/predictions" style={{ textDecoration: "none" }}>
+          <button
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.5rem 0.85rem",
+              borderRadius: 8,
+              border: "1px solid rgba(168, 85, 247, 0.35)",
+              background: "rgba(88, 28, 135, 0.5)",
+              color: "#d8b4fe",
+              fontSize: "0.8rem",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            <Brain size={14} />
+            ML Predictions
+          </button>
+        </Link>
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <span

@@ -45,7 +45,11 @@ export default function SensorHealthPanel({ buildingId }: Props) {
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-100">
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-semibold">SENSOR HEALTH</span>
+        <div className="flex items-center gap-3">
+          <span className="font-semibold">
+            {buildingId ? `SENSOR HEALTH - ${buildingId.toUpperCase()}` : "SENSOR HEALTH"}
+          </span>
+        </div>
         <span className="text-slate-400">
           {loading
             ? "…"
