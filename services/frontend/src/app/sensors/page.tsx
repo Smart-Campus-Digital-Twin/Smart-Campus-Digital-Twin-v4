@@ -374,14 +374,25 @@ export default function SensorsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sensors.filter(s => s.broken || s.anomalous).map((s) => (
-                    <tr key={s.sensor_id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                  {sensors
+                    .filter(s => s.broken || s.anomalous)
+                    .sort((a, b) => {
+                      // Priority: broken (DOWN) first, then anomalous
+                      const ra = a.broken ? 0 : 1;
+                      const rb = b.broken ? 0 : 1;
+                      if (ra !== rb) return ra - rb;
+                      return a.sensor_id.localeCompare(b.sensor_id);
+                    })
+                    .map((s) => (
+                    <tr key={s.sensor_id} className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors ${s.broken ? "bg-red-500/4" : ""}`}>
                       <td className="px-4 py-3 font-medium text-slate-200">{s.sensor_id}</td>
                       <td className="px-4 py-3 text-slate-400">{s.sensor_type}</td>
                       <td className="px-4 py-3 text-slate-400">{s.building_id} - {s.room_id}</td>
                       <td className="px-4 py-3">
                         {s.broken ? (
-                          <span className="bg-red-500/10 text-red-400 px-2 py-1 rounded text-xs font-semibold">DOWN</span>
+                          <span className="bg-red-500/15 text-red-300 border border-red-500/40 px-2 py-1 rounded text-xs font-bold tracking-wider flex items-center gap-1 w-fit">
+                            <ServerCrash className="h-3 w-3" /> DOWN
+                          </span>
                         ) : (
                           <span className="bg-amber-500/10 text-amber-400 px-2 py-1 rounded text-xs font-semibold">ANOMALY</span>
                         )}
@@ -400,36 +411,77 @@ export default function SensorsPage() {
             </div>
           </div>
 
-          {/* Anomaly Logs */}
+          {/* Error Log — DOWN sensors first, then anomalies */}
           <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-xl flex flex-col h-[400px]">
             <h3 className="text-lg font-semibold mb-4 text-amber-400 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" /> Recent Error Logs
             </h3>
             <div className="overflow-y-auto flex-1 pr-2 space-y-3">
-              {anomalies.length > 0 ? (
-                anomalies.map((a, i) => (
-                  <div key={`${a.detected_at}-${i}`} className="p-3 bg-slate-800/40 rounded-lg border border-slate-700/50">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className={`text-sm font-semibold ${a.severity === 'critical' ? 'text-red-400' : 'text-amber-400'}`}>
-                        {a.rule}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(a.detected_at).toLocaleString()}
-                      </span>
+              {(() => {
+                // Synthesize "down" entries from broken sensors so they appear
+                // in the same feed as anomalies, with top priority.
+                const downEntries = sensors
+                  .filter(s => s.broken)
+                  .map(s => ({
+                    kind: "down" as const,
+                    detected_at: s.last_seen_ms ? new Date(s.last_seen_ms).toISOString() : new Date().toISOString(),
+                    rule: "SENSOR_OFFLINE",
+                    severity: "critical",
+                    sensor_id: s.sensor_id,
+                    room_id: s.room_id,
+                    building_id: s.building_id,
+                    sensor_type: s.sensor_type,
+                    seconds_since: s.seconds_since,
+                    value: s.last_value,
+                  }));
+                const anomEntries = anomalies.map(a => ({ kind: "anom" as const, ...a }));
+                // DOWN first regardless of timestamp; within each group, newest first
+                const combined = [
+                  ...downEntries.sort((a, b) => (b.detected_at).localeCompare(a.detected_at)),
+                  ...anomEntries.sort((a, b) => (b.detected_at).localeCompare(a.detected_at)),
+                ];
+                if (combined.length === 0) {
+                  return (
+                    <div className="flex h-full items-center justify-center text-slate-500">
+                      No recent error logs.
                     </div>
-                    <div className="text-xs text-slate-400 mb-1">
-                      Sensor: <span className="text-slate-300">{a.sensor_id}</span> | Location: <span className="text-slate-300">{a.room_id}</span>
+                  );
+                }
+                return combined.map((e, i) => {
+                  const isDown = e.kind === "down";
+                  return (
+                    <div
+                      key={`${e.kind}-${e.sensor_id}-${e.detected_at}-${i}`}
+                      className={`p-3 rounded-lg border ${isDown
+                        ? "bg-red-500/10 border-red-500/40 ring-1 ring-red-500/20"
+                        : "bg-slate-800/40 border-slate-700/50"}`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className={`text-sm font-bold flex items-center gap-1.5 ${isDown ? "text-red-300" : e.severity === "critical" ? "text-red-400" : "text-amber-400"}`}>
+                          {isDown && <ServerCrash className="h-3.5 w-3.5" />}
+                          {isDown && <span className="text-[10px] bg-red-500/30 text-red-200 px-1.5 py-0.5 rounded border border-red-500/50 tracking-wider">PRIORITY</span>}
+                          {e.rule}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {new Date(e.detected_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400 mb-1">
+                        Sensor: <span className="text-slate-300">{e.sensor_id}</span> | Location: <span className="text-slate-300">{e.room_id}</span>
+                      </div>
+                      {isDown ? (
+                        <div className="text-xs text-red-300/80">
+                          Offline {e.seconds_since != null ? `for ${Math.round(e.seconds_since)}s` : ""} · last value: {JSON.stringify(e.value)}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500">
+                          Value detected: {JSON.stringify(e.value)}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-slate-500">
-                      Value detected: {JSON.stringify(a.value)}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-500">
-                  No recent error logs.
-                </div>
-              )}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
