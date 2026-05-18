@@ -4,6 +4,7 @@ ENV/
 .venv
 architecture_diagram.html
 .claude
+edge-computing
 # Secret env files — only *.env.example files are committed
 env/*.env
 env/.env

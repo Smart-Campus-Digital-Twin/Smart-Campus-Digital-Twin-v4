@@ -26,7 +26,7 @@ PREDICTION_SERVICE_URL = "http://ml-prediction:8001"
 # ── Pydantic Models ───────────────────────────────────────────────────────────
 class CongestionPredictionRequest(BaseModel):
     room_id: str
-    room_type: str = Field(..., pattern="^(canteen|library)$")
+    room_type: str = Field(..., pattern="^(canteen|library|auditorium|classroom|lab|office|hostel)$")
     building_id: str
     timestamp: str
     avg: float = Field(..., ge=0)
@@ -94,7 +94,7 @@ async def predict_congestion(req: CongestionPredictionRequest):
 
 class SeriesRequest(BaseModel):
     room_id: str
-    room_type: str = Field(..., pattern="^(canteen|library)$")
+    room_type: str = Field(..., pattern="^(canteen|library|auditorium|classroom|lab|office|hostel)$")
     building_id: str
     timestamp: str
     avg: float = Field(..., ge=0)

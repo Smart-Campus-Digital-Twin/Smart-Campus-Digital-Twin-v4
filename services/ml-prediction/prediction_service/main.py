@@ -53,9 +53,21 @@ write_api = None
 
 
 # ── Pydantic Models ───────────────────────────────────────────────────────────
+_ROOM_TYPE_PATTERN = "^(canteen|library|auditorium|classroom|lab|office|hostel)$"
+
+
+def _model_for(room_type: str):
+    """Map any supported room_type to a loaded model.
+    Canteen → canteen model. Everything else (library + important areas) → library model.
+    """
+    if room_type == "canteen":
+        return models.get("canteen")
+    return models.get("library")
+
+
 class CongestionPredictionRequest(BaseModel):
     room_id: str
-    room_type: str = Field(..., pattern="^(canteen|library)$")
+    room_type: str = Field(..., pattern=_ROOM_TYPE_PATTERN)
     building_id: str
     timestamp: str
     avg: float = Field(..., ge=0)
@@ -74,7 +86,7 @@ class PredictionResponse(BaseModel):
 
 class SeriesRequest(BaseModel):
     room_id: str
-    room_type: str = Field(..., pattern="^(canteen|library)$")
+    room_type: str = Field(..., pattern=_ROOM_TYPE_PATTERN)
     building_id: str
     timestamp: str
     avg: float = Field(..., ge=0)
@@ -219,7 +231,7 @@ async def predict_congestion(req: CongestionPredictionRequest):
     Predict next-slot occupancy for canteen or library.
     Writes prediction to InfluxDB and returns the result.
     """
-    model = models.get(req.room_type)
+    model = _model_for(req.room_type)
     if model is None:
         raise HTTPException(
             status_code=503,
@@ -268,7 +280,7 @@ async def predict_congestion(req: CongestionPredictionRequest):
 async def predict_congestion_series(req: SeriesRequest):
     """Multi-step rolling forecast. Each step appends the prior prediction
     to the history buffer and advances the timestamp by step_minutes."""
-    model = models.get(req.room_type)
+    model = _model_for(req.room_type)
     if model is None:
         raise HTTPException(status_code=503, detail=f"Model for room_type '{req.room_type}' not available")
 
